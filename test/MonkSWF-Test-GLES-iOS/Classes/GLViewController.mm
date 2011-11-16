@@ -29,7 +29,7 @@ using namespace MonkSWF;
     [super viewDidLoad];
 	
 	NSBundle      *mainBundle = [NSBundle mainBundle];
-	NSString      *fromFilePath = [[mainBundle resourcePath] stringByAppendingPathComponent:@"puppy.swf"];
+	NSString      *fromFilePath = [[mainBundle resourcePath] stringByAppendingPathComponent:@"giraffe.swf"];
 	NSFileHandle  *fromFile = [NSFileHandle fileHandleForReadingAtPath:fromFilePath];;
 	if (fromFile) {
 		NSData *data = [fromFile readDataToEndOfFile];
@@ -102,7 +102,7 @@ using namespace MonkSWF;
 - (void)drawView:(id)sender {
 	
 	static VGfloat angle = 0;
-	angle += 0.1;
+//	angle += 0.1;
 	if( angle > 360 )
 		angle = 0;
 	
