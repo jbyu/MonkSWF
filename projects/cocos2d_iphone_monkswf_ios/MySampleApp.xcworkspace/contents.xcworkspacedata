@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:MonkVG/projects/MonkVG-iOS/MonkVG-iOS.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:MonkSWF/projects/MonkSWF-iOS/MonkSWF-iOS.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:cocos2d-iphone/cocos2d-ios.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:MySampleApp/MySampleApp.xcodeproj">
+   </FileRef>
+</Workspace>
