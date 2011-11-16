@@ -1,4 +1,5 @@
-MonkSWF -- An SWF Animation Player ==================================
+MonkSWF -- An SWF Animation Player 
+==================================
 
 ## Overview
 
@@ -45,27 +46,27 @@ state and then restore before calling any MonkVG or MonkSWF methods.
 
 Initialization:
 
-<tt>
-#include <MonkSWF.h>
-#include <vg/openvg.h>
-#include <vg/vgu.h>
+<pre><code>
+	#include <MonkSWF.h>
+	#include <vg/openvg.h>
+	#include <vg/vgu.h>
+	
+	char* filebuffer;
+	int filebuffersize;
+	... Load The SWF File into a buffer ...
+	MonkSWF::Reader r( filebuffer, filebuffersize );
+			
+	MonkSWF::SWF* swf = new SWF();
+	swf->initialize();
+	swf->read( &r );	// read in SWF file
 
-char* filebuffer;
-int filebuffersize;
-... Load The SWF File into a buffer ...
-MonkSWF::Reader r( filebuffer, filebuffersize );
-		
-MonkSWF::SWF* swf = new SWF();
-swf->initialize();
-swf->read( &r );	// read in SWF file
-
-</tt>
+</code></pre>
 
 Rendering and Animation
 
 This example shows rendering the root SWF Movie.
 
-<tt>
+<pre><code>
 
 	... begin opengl context ...
 	
@@ -84,11 +85,11 @@ This example shows rendering the root SWF Movie.
 	swf->drawFrame( frame );
 
 	... end opengl context ...
-</tt>
+</code></pre>
 
 Alternatively you render a specific sprite in a SWF.
 
-<tt>
+<pre><code>
 	// get a specific sprite
 	MonkSWF::IDefineSpriteTag*	sprite = swf->spriteAt( spriteIdx );
 	
@@ -110,4 +111,4 @@ Alternatively you render a specific sprite in a SWF.
 
 	... end opengl context ...
 
-</tt>
+</code></pre>
