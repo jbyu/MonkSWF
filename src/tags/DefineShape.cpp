@@ -706,7 +706,7 @@ namespace MonkSWF {
 		return combined;
 	}
 	
-	bool Gradient::read( Reader* reader ) {
+	bool Gradient::read( Reader* reader, bool support_32bit_color  ) {
 		_spread_mode = reader->getbits( 2 );
 		_interpolation_mode = reader->getbits( 2 );
 		_num_gradients = reader->getbits( 4 );
@@ -716,7 +716,11 @@ namespace MonkSWF {
 			record._ratio = reader->get<uint8_t>();
 			record._color.r = reader->get<uint8_t>(); 
 			record._color.g = reader->get<uint8_t>(); 
-			record._color.b = reader->get<uint8_t>(); 
+			record._color.b = reader->get<uint8_t>();
+			if( support_32bit_color )
+				record._color.a = reader->get<uint8_t>();
+			else
+				record._color.a = 255;
 			_gradient_records.push_back( record );
 		}
 		
@@ -770,7 +774,7 @@ namespace MonkSWF {
 		if( _type == LINEAR_GRADIENT_FILL || _type == RADIAL_GRADIENT_FILL || _type == FOCAL_GRADIENT_FILL ) {
 			reader->getMatrix( _gradient_matrix );
 			reader->align();
-			_gradient.read( reader );
+			_gradient.read( reader, support_32bit_color );
 			//			assert(0);
 		}
 		

@@ -22,7 +22,7 @@ namespace MonkSWF {
 
 	class Gradient {
 	public:
-		bool read( Reader* reader );
+		bool read( Reader* reader, bool support_32bit_color  );
 		
 	private:
 		uint8_t		_spread_mode;			// 0 = Pad mode 1 = Reflect mode 2 = Repeat mode
