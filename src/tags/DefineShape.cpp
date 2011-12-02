@@ -769,6 +769,7 @@ namespace MonkSWF {
 		
 		if( _type == LINEAR_GRADIENT_FILL || _type == RADIAL_GRADIENT_FILL || _type == FOCAL_GRADIENT_FILL ) {
 			reader->getMatrix( _gradient_matrix );
+			reader->align();
 			_gradient.read( reader );
 			//			assert(0);
 		}
@@ -777,6 +778,7 @@ namespace MonkSWF {
 		   || _type == NON_SMOOTHED_CLIPPED_BITMAP_FILL || _type == NON_SMOOTHED_REPEATING_BITMAP_FILL ) {
 			_bitmap_id = reader->get<uint16_t>();
 			reader->getMatrix( _bitmap_matrix );
+			reader->align();
 		}
 		return true;
 	}
