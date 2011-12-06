@@ -19,10 +19,16 @@
 using namespace std;
 
 namespace MonkSWF {
+    
+#define PAD_SPREAD_MODE         0x0
+#define REFLECT_SPREAD_MODE     0x1
+#define REPEAT_SPREAD_MODE     0x2
+
 
 	class Gradient {
 	public:
-		bool read( Reader* reader );
+		bool read( Reader* reader, bool support_32bit_color );
+        void configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color);
 		
 	private:
 		uint8_t		_spread_mode;			// 0 = Pad mode 1 = Reflect mode 2 = Repeat mode

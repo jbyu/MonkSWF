@@ -706,22 +706,75 @@ namespace MonkSWF {
 		return combined;
 	}
 	
-	bool Gradient::read( Reader* reader ) {
+	bool Gradient::read( Reader* reader, bool support_32bit_color) {
 		_spread_mode = reader->getbits( 2 );
 		_interpolation_mode = reader->getbits( 2 );
 		_num_gradients = reader->getbits( 4 );
 		
 		for ( int i = 0; i < _num_gradients; i++ ) {
-			Gradient::Record record;
+            Gradient::Record record;
 			record._ratio = reader->get<uint8_t>();
 			record._color.r = reader->get<uint8_t>(); 
 			record._color.g = reader->get<uint8_t>(); 
-			record._color.b = reader->get<uint8_t>(); 
-			_gradient_records.push_back( record );
+			record._color.b = reader->get<uint8_t>();
+            if (support_32bit_color) {
+                record._color.a = reader->get<uint8_t>();
+            }
+            _gradient_records.push_back( record );
 		}
-		
+        
 		return true;
 	}
+    
+    void Gradient::configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color ) {
+        float c[6];
+        c[0] = m.sx / double(1<<16);
+        c[1] = m.sy / double(1<<16);
+        c[2] = m.tx * 0.05;
+        c[3] = m.ty * 0.05;
+        c[4] = m.r0 / double(1<<16);
+        c[5] = m.r1 / double(1<<16);
+        
+        vgSetParameterfv(paint, VG_PAINT_2x3_GRADIENT, 6, &c[0]);
+        
+        if (type == LINEAR_GRADIENT_FILL) {
+            vgSetParameteri(paint, VG_PAINT_TYPE, VG_PAINT_TYPE_LINEAR_2x3_GRADIENT);
+        } else if (type == RADIAL_GRADIENT_FILL) {
+            vgSetParameteri(paint, VG_PAINT_TYPE, VG_PAINT_TYPE_RADIAL_2x3_GRADIENT);
+        } else if (type == FOCAL_GRADIENT_FILL) {
+            assert(0); // not supported, gradient would need to read the focal point
+        }
+        
+        if (_spread_mode == PAD_SPREAD_MODE) {
+            vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_PAD);
+        } else if (_spread_mode == REFLECT_SPREAD_MODE) {
+            vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_REFLECT);
+        } else if (_spread_mode == REPEAT_SPREAD_MODE) {
+            vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_REPEAT);
+        }
+        
+        //VG_PAINT_COLOR_RAMP_STOPS
+        //  One entry per color
+        int rampStopsSize = _gradient_records.size() * 5;
+        float* rampStops = new float[rampStopsSize];
+        
+        for (int i = 0; i < _gradient_records.size(); i++) {
+            int n = i * 5;
+            rampStops[n]      = _gradient_records[i]._ratio / 255.0f;
+            rampStops[n+1]    = _gradient_records[i]._color.r / 255.0f;
+            rampStops[n+2]    = _gradient_records[i]._color.g / 255.0f;
+            rampStops[n+3]    = _gradient_records[i]._color.b / 255.0f;
+            if (support_32bit_color) {
+                rampStops[n+4]    = _gradient_records[i]._color.a / 255.0f;
+            } else {
+                rampStops[n+4]    = 1.0f;
+            }
+        }
+        vgSetParameterfv(paint, VG_PAINT_COLOR_RAMP_STOPS, rampStopsSize, &rampStops[0]);
+        
+        delete [] rampStops;
+        rampStops = NULL;
+    }
 	
 	bool LineStyle::read( Reader* reader, bool support_32bit_color ) {
 		// create the openvg paint
@@ -762,21 +815,26 @@ namespace MonkSWF {
 				_color[3] = 1.0f;
 			
 			vgSetParameterfv( _paint, VG_PAINT_COLOR, 4, &_color[0] );
-
+            //cout << "\t\tFill Style: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
 		}
 		
-//		cout << "\t\tFill Style: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
+
 		
 		if( _type == LINEAR_GRADIENT_FILL || _type == RADIAL_GRADIENT_FILL || _type == FOCAL_GRADIENT_FILL ) {
 			reader->getMatrix( _gradient_matrix );
-			_gradient.read( reader );
+            reader->align(); // Matrix alignment
+			_gradient.read( reader, support_32bit_color );
 			//			assert(0);
+            // create the openvg paint
+            _paint = vgCreatePaint();
+            _gradient.configPaint(_paint, _type, _gradient_matrix, support_32bit_color);
 		}
 		
 		if( _type == REPEATING_BITMAP_FILL || _type == CLIPPED_BITMAP_FILL 
 		   || _type == NON_SMOOTHED_CLIPPED_BITMAP_FILL || _type == NON_SMOOTHED_REPEATING_BITMAP_FILL ) {
 			_bitmap_id = reader->get<uint16_t>();
 			reader->getMatrix( _bitmap_matrix );
+            reader->align(); // Matrix alignment
 		}
 		return true;
 	}
@@ -791,7 +849,6 @@ namespace MonkSWF {
 		uint8_t num_fill_styles = reader->get<uint8_t>();
 		if( num_fill_styles == 0xff )
 			num_fill_styles = reader->get<uint16_t>();
-		
 		
 		for ( int i = 0; i < num_fill_styles; i++ ) {
 			FillStyle fill;
@@ -943,7 +1000,7 @@ namespace MonkSWF {
 				}	// if( flags )
 				
 			} else {	// edge type record
-				
+				//if (!path) { path = new Path(); } // SG - sometimes path is null, why? A: parsing errors
 				uint16_t isLine = reader->getbits( 1 );
 				
 				if( isLine ) {
@@ -1056,10 +1113,7 @@ namespace MonkSWF {
 			OpenVGPath &path = *iter;
 			uint32_t path_style = 0;
 			
-			
 			//			vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
-			
-			
 			if( path._fill_style && path._fill_style->getPaint() != VG_INVALID_HANDLE ) {	// set up fill style
 				path_style |= VG_FILL_PATH;
 				vgSetPaint( path._fill_style->getPaint(), VG_FILL_PATH );
