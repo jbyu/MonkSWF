@@ -29,7 +29,7 @@ using namespace MonkSWF;
     [super viewDidLoad];
 	
 	NSBundle      *mainBundle = [NSBundle mainBundle];
-	NSString      *fromFilePath = [[mainBundle resourcePath] stringByAppendingPathComponent:@"giraffe.swf"];
+	NSString      *fromFilePath = [[mainBundle resourcePath] stringByAppendingPathComponent:@"puppy.swf"];
 	NSFileHandle  *fromFile = [NSFileHandle fileHandleForReadingAtPath:fromFilePath];;
 	if (fromFile) {
 		NSData *data = [fromFile readDataToEndOfFile];
@@ -118,8 +118,8 @@ using namespace MonkSWF;
 	}
 	vgLoadIdentity();
 	vgRotate( angle );
-	_swf->setOffsetTranslate( offset );
-	_swf->setOffsetScale( 0.5f );
+//	_swf->setOffsetTranslate( offset );
+//	_swf->setOffsetScale( 0.5f );
 	_swf->drawFrame( _frame );
 	
 //	i think the camera is flipped in the wrong direction

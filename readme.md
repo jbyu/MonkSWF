@@ -112,3 +112,9 @@ Alternatively you render a specific sprite in a SWF.
 	... end opengl context ...
 
 </code></pre>
+
+## Donate
+
+![Donate](http://www.pledgie.com/campaigns/12954.png)
+
+<a href='http://www.pledgie.com/campaigns/12954'><img alt='Click here to lend your support to: MonkSWF and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/12954.png?skin_name=chrome' border='0' /></a>

@@ -706,7 +706,7 @@ namespace MonkSWF {
 		return combined;
 	}
 	
-	bool Gradient::read( Reader* reader, bool support_32bit_color) {
+	bool Gradient::read( Reader* reader, bool support_32bit_color  ) {
 		_spread_mode = reader->getbits( 2 );
 		_interpolation_mode = reader->getbits( 2 );
 		_num_gradients = reader->getbits( 4 );
@@ -717,10 +717,11 @@ namespace MonkSWF {
 			record._color.r = reader->get<uint8_t>(); 
 			record._color.g = reader->get<uint8_t>(); 
 			record._color.b = reader->get<uint8_t>();
-            if (support_32bit_color) {
-                record._color.a = reader->get<uint8_t>();
-            }
-            _gradient_records.push_back( record );
+			if( support_32bit_color )
+				record._color.a = reader->get<uint8_t>();
+			else
+				record._color.a = 255;
+			_gradient_records.push_back( record );
 		}
         
 		return true;
@@ -822,7 +823,7 @@ namespace MonkSWF {
 		
 		if( _type == LINEAR_GRADIENT_FILL || _type == RADIAL_GRADIENT_FILL || _type == FOCAL_GRADIENT_FILL ) {
 			reader->getMatrix( _gradient_matrix );
-            reader->align(); // Matrix alignment
+			reader->align();
 			_gradient.read( reader, support_32bit_color );
 			//			assert(0);
             // create the openvg paint
@@ -834,7 +835,7 @@ namespace MonkSWF {
 		   || _type == NON_SMOOTHED_CLIPPED_BITMAP_FILL || _type == NON_SMOOTHED_REPEATING_BITMAP_FILL ) {
 			_bitmap_id = reader->get<uint16_t>();
 			reader->getMatrix( _bitmap_matrix );
-            reader->align(); // Matrix alignment
+			reader->align();
 		}
 		return true;
 	}
