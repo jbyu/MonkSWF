@@ -8,8 +8,11 @@
  */
 
 #include "mkHeader.h"
+
+#ifdef USE_ZLIB
 #include <zlib.h>
 #define MAX_BUFFER 1000000
+#endif
 
 #include <iostream>
 using namespace std;
@@ -39,6 +42,7 @@ namespace MonkSWF {
 		_file_length = reader->get<uint32_t>();
 		
 		if ( _signature[0] == 'C' ) {
+#ifdef USE_ZLIB
 			// compressed file
 			_outputBuffer = (char*)malloc( _file_length );
 			
@@ -77,21 +81,16 @@ namespace MonkSWF {
 			}
 			
 			reader->setNewData( _outputBuffer, _file_length );
-			
+#else
+            MK_ASSERT(0);
+#endif
 		}
 		
 		
 		// get the bound rectangle
-		int32_t nbits;
-		nbits = (int32_t) reader->getbits( 5 );
-		_frame_size.xmin = reader->getsignedbits( nbits );
-		_frame_size.xmax = reader->getsignedbits( nbits );
-		_frame_size.ymin = reader->getsignedbits( nbits );
-		_frame_size.ymax = reader->getsignedbits( nbits );	
-		
+        reader->getRectangle(_frame_size);
 		uint16_t fr = reader->get<uint16_t>();
-		_frame_rate = fr/256.0f;
-		
+		_frame_rate = 1.f/(fr>>8);
 		_frame_count = reader->get<uint16_t>(); 
 				
 		return true;

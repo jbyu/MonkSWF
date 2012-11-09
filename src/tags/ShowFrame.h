@@ -20,13 +20,13 @@ namespace MonkSWF {
 		: IShowFrameTag( h )
 		{}
 		
-		virtual ~ShowFrameTag() {
-			
-		}
+		virtual ~ShowFrameTag()
+        {}
 		
-		virtual bool read( Reader* reader ) {
+		virtual bool read( Reader* reader, SWF* ) {
 			return true;
 		}
+
 		virtual void print() {
 			cout << "SHOWFRAME" << endl;
 		}

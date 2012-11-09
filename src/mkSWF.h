@@ -16,28 +16,44 @@
 #include <map> 
 #include <vector>
 #include <list>
+
+#ifdef USE_BOOST
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#endif
 
 using namespace std;
 
 namespace MonkSWF {
+
+    class Renderer
+    {
+    public:
+        virtual ~Renderer() {}
+        virtual void applyTexture( unsigned int texture ) = 0;
+        virtual void applyTransform( const PVRTMATRIX3f& mtx ) = 0;
+        virtual void drawQuad( const RECT& rect ) = 0;
+        virtual unsigned int getTexture( const char *filename ) = 0;
+    };
 	
 	class SWF {
 	public:
-		
+
+#ifdef USE_BOOST
 		typedef boost::shared_ptr<SWF> SmartPtr;
 		static SWF::SmartPtr create( ) {
 			return boost::make_shared<SWF>( );
 		}
-
+#endif
 
 		// factory function prototype
 		typedef ITag* (*TagFactoryFunc)( TagHeader* );
 	
 		SWF(); 
+        ~SWF();
 		
-		bool initialize();
+        Renderer *GetRenderer(void) { return mpRenderer; }
+		bool initialize(Renderer*renderer);
 		bool read( Reader *reader );
 		void print();
 		
@@ -97,17 +113,19 @@ namespace MonkSWF {
 		void addSprite( IDefineSpriteTag* sprite, uint16_t cid ) {
 			_sprite_dictionary[cid] = sprite;
 		}
-		
+		/*
 		int32_t numFrames() const {
 			return _frame_list.size();
 		}
-		
+		*/
 		Reader* reader() const {
 			return _reader;
 		}
 		
 		void drawFrame( int32_t frame_idx );
-		
+        void draw(void) { drawFrame(_frame); }
+        void play(float delta);
+
 		float getFrameWidth() const {
 			return _header.getFrameWidth();
 		}
@@ -116,6 +134,9 @@ namespace MonkSWF {
 		}
 		float getFrameRate() const {
 			return _header.getFrameRate();
+		}
+		int getFrameCount() const {
+			return _header.getFrameCount();
 		}
 		
 		void setOffsetTranslate( const float t[2] ) {
@@ -158,6 +179,7 @@ namespace MonkSWF {
 		typedef std::vector< DisplayList* >					FrameList;
 		typedef FrameList::iterator							FrameListIter;
 		
+        typedef std::vector< ITag* >					TagList;
 		
 		ShapeDictionary		_shape_dictionary;
 		SpriteDictionary	_sprite_dictionary;
@@ -172,8 +194,11 @@ namespace MonkSWF {
 		float				_offsetTranslate[2];
 		float				_offsetScale;
 		float				_rootTransform[9];
-		
-		
+		float               _accumulator;
+
+
+		TagList             _tag_list;
+        Renderer            *mpRenderer;
 	
 	};
 }

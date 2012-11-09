@@ -20,11 +20,10 @@ namespace MonkSWF {
 		: IRemoveObjectTag( h )
 		{}
 		
-		virtual ~RemoveObjectTag() {
-			
-		}
+		virtual ~RemoveObjectTag()
+        {}
 		
-		virtual bool read( Reader* reader ) {
+		virtual bool read( Reader* reader, SWF* ) {
 			if( code() == REMOVEOBJECT )
 				_character_id = reader->get<uint16_t>();
 				

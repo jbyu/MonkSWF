@@ -12,12 +12,14 @@
 
 namespace MonkSWF {
 
-	typedef         signed long     fixed_t;
-	typedef         signed long     coord_t;
+	typedef     signed long     fixed_t;
+	typedef     signed long     coord_t;
 	
 	#define coord_t_MAX 0x7fffffff
 	#define coord_t_MIN -0x80000000
 	
+    const int SWF_TWIPS	= 20;
+
 	// Basic Structures
 	
 	struct POINT
@@ -48,9 +50,19 @@ namespace MonkSWF {
 	};
 	
 	struct MATRIX { 
-		fixed_t        sx, r1, tx;
-		fixed_t        r0, sy, ty;
+		float        sx, r1, tx;
+		float        r0, sy, ty;
 	};
+
+    struct PVRTMATRIX3f
+    {
+        float* operator [] ( const int Row )
+    	{
+		    return &f[Row*3];
+	    }
+	    float f[9];	/*!< Array of float */
+    };
+
 //	
 //	typedef struct _CXFORM
 //		{ S16           a0, a1; /* mult, add */

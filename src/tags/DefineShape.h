@@ -11,8 +11,8 @@
 #define __DefineShape_h__
 
 #include "mkTag.h"
-#include <VG/openvg.h>
-#include <VG/vgu.h>
+#include <MonkVG/openvg.h>
+//#include <MonkVG/vgu.h>
 #include <vector>
 #include <list>
 #include <map>
@@ -178,10 +178,10 @@ namespace MonkSWF {
 			
 		}
 		
-		virtual bool read( Reader* reader );
+		virtual bool read( Reader* reader, SWF* );
 		virtual void print();
 		
-		virtual void draw();
+		virtual void draw( SWF* swf );
 		
 		// regular DefineShape tag == 2
 		static ITag* create( TagHeader* header );

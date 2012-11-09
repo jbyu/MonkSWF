@@ -17,12 +17,10 @@
 namespace MonkSWF {
 	
 	class SWF;
-	
 	using namespace std;
 	
 	class TagHeader {
 	public:
-		
 		inline uint32_t code() const {
 			return _code;
 		}
@@ -34,19 +32,15 @@ namespace MonkSWF {
 		bool read( Reader *reader );
 		void print();
 		
-		
 	private:
-	
 		uint32_t _code;	
 		uint32_t _length;
 	};
-	
-	class ITag {
 
+
+	class ITag {
 	public:
-		
-		
-		virtual bool read( Reader* reader ) = 0;
+		virtual bool read( Reader* reader, SWF* _swf ) = 0;
 		virtual void print() = 0;
 		
 		const TagHeader& header() {
@@ -61,15 +55,13 @@ namespace MonkSWF {
 			return _header.length();
 		}
 		
-	protected:
+		virtual ~ITag() {
+		}
 
+	protected:
 		ITag( TagHeader& header ) 
 		:	_header( header ) 
 		{}
-		
-		virtual ~ITag() {
-			
-		}
 		
 		TagHeader	_header;
 	};
@@ -83,7 +75,7 @@ namespace MonkSWF {
 		
 		virtual ~EndTag() {}
 		
-		virtual bool read( Reader* reader ) { return true; }
+		virtual bool read( Reader* reader, SWF* _swf ) { return true; }
 		virtual void print() {
 			std::cout << "END TAG" << std::endl;
 		}
@@ -91,8 +83,6 @@ namespace MonkSWF {
 		static ITag* create( TagHeader* header ) {
 			return (ITag*)(new EndTag( *header ));
 		}				
-		
-		
 	};
 	
 #define DEFINESHAPE 2
@@ -101,35 +91,27 @@ namespace MonkSWF {
 #define DEFINESHAPE4 83	
 	class IDefineShapeTag : public ITag {
 	public:
-	
-		virtual void draw() = 0;
+		virtual void draw( SWF* swf ) = 0;
 		
 		uint16_t shapeId() const {
 			return _shape_id;
 		}
-		
 	
 	protected:
-	
 		IDefineShapeTag( TagHeader& header ) 
 		:	ITag( header )
 		,	_shape_id( 0 )
 		{}
 		
-		virtual ~IDefineShapeTag() {
-			
-		}
+		virtual ~IDefineShapeTag() {}
 		
 		uint16_t			_shape_id;
-		
-	
 	};
 	
 #define DEFINESPRITE 39
 	class IDefineSpriteTag : public ITag {
 	public:
-		
-		virtual void draw( const int32_t frame ) = 0;
+		virtual void draw(  SWF* ) = 0;
 		virtual void setTranslate( float t[2] ) = 0;
 		virtual void getTranslate( float t[2] ) const = 0;
 		virtual void setScale( float s ) = 0;
@@ -143,10 +125,8 @@ namespace MonkSWF {
 			return _frame_count;
 		}
 		
-		void setSWF( SWF* swf ) {
-			_swf = swf;
-		}
-		
+		//void setSWF( SWF* swf ) {_swf = swf;}
+
 	protected:
 		IDefineSpriteTag( TagHeader& header )
 		:	ITag( header )
@@ -156,17 +136,12 @@ namespace MonkSWF {
 		virtual ~IDefineSpriteTag()
 		{
 		}
-		
-		typedef std::vector<ITag*>		FrameTagList;
-		typedef vector<FrameTagList*>	FrameList;
-		
-		
+	
 		uint16_t		_sprite_id;
 		uint16_t		_frame_count;
-		FrameList		_frames;
-		SWF*			_swf;
-		
+		//SWF*			_swf;
 	};
+
 #define PLACEOBJECT2 0x1A 
 	class IPlaceObjectTag : public ITag {
 	public:
@@ -205,10 +180,10 @@ namespace MonkSWF {
 		virtual void setOffsetScale( float s ) = 0;
 		virtual float offsetScale() const = 0;
 		
-		
-		
+    	virtual ~IPlaceObjectTag() {
+		}
+
 	protected:
-		
 		IPlaceObjectTag( TagHeader& header ) 
 		:	ITag( header )
 		,	_depth( 0 )
@@ -216,10 +191,6 @@ namespace MonkSWF {
 		,	_has_character( 0 )
 		,	_has_matrix( 0 )
 		{}
-		
-		virtual ~IPlaceObjectTag() {
-			
-		}
 		
 		uint16_t	_depth;
 		uint16_t	_character_id;
@@ -231,13 +202,11 @@ namespace MonkSWF {
 #define SHOWFRAME 1	
 	class IShowFrameTag : public ITag {
 	protected:
-		
 		IShowFrameTag( TagHeader& header ) 
 		:	ITag( header )
 		{}
 		
 		virtual ~IShowFrameTag() {
-			
 		}
 	};
 
@@ -251,22 +220,18 @@ namespace MonkSWF {
 		uint16_t depth() const {
 			return _depth;
 		}
+		virtual ~IRemoveObjectTag() {
+		}
+
 	protected:
-		
 		IRemoveObjectTag( TagHeader& header ) 
 		:	ITag( header )
 		,	_character_id( 0 )
 		{}
 		
-		virtual ~IRemoveObjectTag() {
-			
-		}
-		
 	protected:
-	
 		uint16_t	_character_id;
 		uint16_t	_depth;
-		
 	};
 	
 }

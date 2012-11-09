@@ -11,7 +11,7 @@
 #define __DefineSprite_h__
 
 #include "mkTag.h"
-#include <VG/openvg.h>
+//#include <VG/openvg.h>
 #include <map>
 
 namespace MonkSWF {
@@ -25,14 +25,12 @@ namespace MonkSWF {
 			_translate[0] = _translate[1] = 0.0f;
 		}
 		
-		virtual ~DefineSpriteTag() {
-			
-		}
+		virtual ~DefineSpriteTag();
 		
-		virtual bool read( Reader* reader );
+		virtual bool read( Reader* reader, SWF* );
 		virtual void print();
 		
-		virtual void draw( const int32_t frame );
+		virtual void draw( SWF* );
 		
 		virtual void setTranslate( float t[2] ) {
 			_translate[0] = t[0];
@@ -57,11 +55,17 @@ namespace MonkSWF {
 		typedef std::map< uint16_t, IPlaceObjectTag* >		DisplayList;
 		typedef DisplayList::iterator						DisplayListIter;
 
-		DisplayList			_display_list;
+		typedef std::vector<ITag*>		FrameTagList;
+		typedef vector<FrameTagList*>	FrameList;
+		FrameList		_frames;
+
+		DisplayList		_display_list;
 		
+        FrameTagList    _tag_list;
+
 		float		_translate[2];
 		float		_scale;
-		
+        int         _currFrame;
 	};
 }
 #endif // __DefineSprite_h__

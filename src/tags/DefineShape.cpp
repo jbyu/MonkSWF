@@ -18,6 +18,16 @@
 
 using namespace std;
 
+#define vgSetParameteri     (void)
+#define vgSetParameterfv    (void)
+#define vgCreatePaint()     1
+#define vgAppendPathData    (void)
+#define vgGetParameteri     1;(void)
+#define vgCreatePath()      1
+#define vgDrawPath          (void)
+#define vgSetf              (void)
+#define vgSetPaint          (void)
+
 namespace MonkSWF {
 	
 	static inline VGfloat calcCubicBezier1d( VGfloat x0, VGfloat x1, VGfloat x2, VGfloat x3, VGfloat t ) {
@@ -735,7 +745,7 @@ namespace MonkSWF {
         c[3] = m.ty * 0.05;
         c[4] = m.r0 / double(1<<16);
         c[5] = m.r1 / double(1<<16);
-        
+
         vgSetParameterfv(paint, VG_PAINT_2x3_GRADIENT, 6, &c[0]);
         
         if (type == LINEAR_GRADIENT_FILL) {
@@ -797,14 +807,11 @@ namespace MonkSWF {
 	}
 	
 	bool FillStyle::read( Reader* reader, bool support_32bit_color ) {
-		
-		
 		_type = reader->get<uint8_t>();
 		//assert( _type == 0 && "unsupported fill style" );
 		
-		if ( _type == SOLID_FILL ) {
-			// create the openvg paint
-			_paint = vgCreatePaint();
+		if ( _type == SOLID_FILL )
+        {
 			
 			_color[0] = (reader->get<uint8_t>()/255.0f);
 			_color[1] = (reader->get<uint8_t>()/255.0f);
@@ -815,6 +822,8 @@ namespace MonkSWF {
 			else
 				_color[3] = 1.0f;
 			
+			// create the openvg paint
+			_paint = vgCreatePaint();
 			vgSetParameterfv( _paint, VG_PAINT_COLOR, 4, &_color[0] );
             //cout << "\t\tFill Style: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
 		}
@@ -1131,15 +1140,17 @@ namespace MonkSWF {
 		}
 	}
 	
-	bool DefineShapeTag::read( Reader* reader ) {
+	bool DefineShapeTag::read( Reader* reader, SWF* ) {
+        int32_t curr = reader->getCurrentPos();
+
 		_shape_id = reader->get<uint16_t>();
 		reader->getRectangle( _bounds );
 		
-		_shape_with_style.read( reader, this );
+		reader->skip( length()-curr );
+		//_shape_with_style.read( reader, this );
 		
 		// todo: DEFINESHAPE4!		
-		
-		//		this->print();
+		// this->print();
 		return true;
 	}
 	
@@ -1152,8 +1163,9 @@ namespace MonkSWF {
 		
 	}
 	
-	void DefineShapeTag::draw() {
-		_shape_with_style.draw();
+	void DefineShapeTag::draw(SWF* swf) {
+		//_shape_with_style.draw();
+        swf->GetRenderer()->drawQuad(_bounds);
 	}
 	
 	ITag* DefineShapeTag::create( TagHeader* header ) {

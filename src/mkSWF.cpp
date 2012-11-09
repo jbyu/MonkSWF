@@ -17,7 +17,10 @@
 namespace MonkSWF {
 	
 	SWF::SWF()
-	:	_offsetScale( 1 )
+	:_offsetScale( 1 )
+    ,_frame(0)
+    ,_accumulator(0)
+    ,mpRenderer(NULL)
 	{
 		_offsetTranslate[0] = 0;
 		_offsetTranslate[1] = 0;
@@ -31,7 +34,30 @@ namespace MonkSWF {
 		_rootTransform[8] = 1;
 		
 	}
-	bool SWF::initialize() {
+
+	SWF::~SWF()
+    {
+        {
+            FrameList::iterator it = _frame_list.begin();
+            while(_frame_list.end() != it)
+            {
+                delete *it;
+                ++it;
+            }
+        }
+        {
+            TagList::iterator it = _tag_list.begin();
+            while(_tag_list.end() != it)
+            {
+                delete *it;
+                ++it;
+            }
+        }
+    }
+
+
+	bool SWF::initialize(Renderer *renderer) {
+        mpRenderer = renderer;
 		
 		// setup the factories
 		addFactory( ENDTAG, EndTag::create );
@@ -55,7 +81,8 @@ namespace MonkSWF {
 		_header.read( reader );
 		
 		// get the first tag
-		TagHeader *tag_header = new TagHeader();
+        TagHeader oHeader;
+		TagHeader *tag_header = &oHeader;//new TagHeader();
 		tag_header->read( reader );
 				
 		// get all tags and build display and frame lists
@@ -67,19 +94,21 @@ namespace MonkSWF {
 			
 			if( factory != _tag_factories.end() && factory->second ) {
 				tag = factory->second( tag_header );
+                _tag_list.push_back(tag);
+
 				int32_t end_pos = reader->getCurrentPos() + tag->length();
 				
 				if( tag_header->code() == DEFINESHAPE || tag_header->code() == DEFINESHAPE2 
 				   || tag_header->code() == DEFINESHAPE3 || tag_header->code() == DEFINESHAPE4 ) {
 					_shape_dictionary.push_back( (IDefineShapeTag*)tag );
 				}
-				
+				/*
 				if ( tag_header->code() == DEFINESPRITE ) {		// tell the sprite about the SWF...
 					IDefineSpriteTag* sprite = (IDefineSpriteTag*)tag;
 					sprite->setSWF(this);
 				}
-				
-				tag->read( reader );
+				*/
+				tag->read( reader, this );
 				reader->align();
 				int32_t dif = end_pos - reader->getCurrentPos();
 				if( dif != 0 ) {
@@ -127,9 +156,7 @@ namespace MonkSWF {
 				if( tag_header->code() == SHOWFRAME ) {	// ShowFrame
 					_frame_list.push_back( display_list );
 					DisplayList *new_display_list = new DisplayList( display_list->begin(), display_list->end() );
-					
 					display_list = new_display_list;
-					
 					//cout << "### SHOWFRAME ###" << endl;
 				}
 				
@@ -144,14 +171,14 @@ namespace MonkSWF {
 				//cout << "*** SKIPPING UNKOWN TAG ***" << endl;
 				tag_header->print();
 				reader->skip( tag_header->length() );
-				delete tag_header;
+				//delete tag_header;
 			}
 
 			
-			tag_header = new TagHeader();
+			//tag_header = new TagHeader();
 			tag_header->read( reader );
 		}
-		
+		delete display_list;
 		return true;
 	}
 	
@@ -159,7 +186,20 @@ namespace MonkSWF {
 		_header.print();
 	}
 	
+	void SWF::play( float delta ) {
+        _accumulator += delta;
+        const float secondPerFrame = getFrameRate();
+        if (secondPerFrame <= _accumulator)
+        {
+            ++_frame;
+            if (getFrameCount() <= _frame)
+                _frame = 0;
+            _accumulator -= secondPerFrame;
+        }
+    }
+
 	void SWF::drawFrame( int32_t frame_idx ) {
+#ifdef USE_OPENVG
 		// make sure we use even odd fill rule
 		vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
 		// clear the screen
@@ -171,7 +211,7 @@ namespace MonkSWF {
 		VGfloat oldMatrix[9];
 		vgGetMatrix( oldMatrix );
 		vgMultMatrix( _rootTransform );
-		
+#endif
 		DisplayList *display_list = _frame_list[ frame_idx ];
 		for (DisplayListIter iter = display_list->begin(); iter != display_list->end(); iter++ ) {
 			IPlaceObjectTag *place_obj = iter->second;
@@ -183,8 +223,9 @@ namespace MonkSWF {
 				place_obj->draw( this );
 			}
 		}
+#ifdef USE_OPENVG
 		// restore old matrix
 		vgLoadMatrix( oldMatrix );
-
+#endif
 	}
 }

@@ -32,13 +32,16 @@ namespace MonkSWF {
 		void print();
 		
 		float getFrameWidth() const {
-			return ((_frame_size.xmax - _frame_size.xmin)/20.0f);
+			return (_frame_size.xmax - _frame_size.xmin);
 		}
 		float getFrameHeight() const {
-			return ((_frame_size.ymax - _frame_size.ymin)/20.0f);
+			return (_frame_size.ymax - _frame_size.ymin);
 		}
 		float getFrameRate() const {
 			return _frame_rate;
+		}
+		int getFrameCount() const {
+			return _frame_count;
 		}
 	
 	private:
@@ -47,7 +50,7 @@ namespace MonkSWF {
 		uint32_t	_file_length;
 		RECT		_frame_size;
 		float		_frame_rate;
-		int16_t		_frame_count;
+		uint16_t	_frame_count;
 		char*		_outputBuffer;		// used for compressed swf files
 	
 	};

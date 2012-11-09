@@ -75,33 +75,33 @@ namespace MonkSWF {
 		
 		inline void getRectangle( RECT& rect ) {
 			const int32_t nbits = (int32_t) getbits( 5 );
-			rect.xmin = getsignedbits( nbits );
-			rect.xmax = getsignedbits( nbits );
-			rect.ymin = getsignedbits( nbits );
-			rect.ymax = getsignedbits( nbits );	
+			rect.xmin = getsignedbits( nbits ) / SWF_TWIPS;
+			rect.xmax = getsignedbits( nbits ) / SWF_TWIPS;
+			rect.ymin = getsignedbits( nbits ) / SWF_TWIPS;
+			rect.ymax = getsignedbits( nbits ) / SWF_TWIPS;	
 		}
 		
 		inline void getMatrix( MATRIX& m ) {
 			int32_t nbits;
 			if ( getbits( 1 ) )	{	// has scale
 				nbits = getbits( 5 );
-				m.sx = getsignedbits( nbits );
-				m.sy = getsignedbits( nbits );
+				m.sx = (float)getsignedbits( nbits )/65536.0f;
+				m.sy = (float)getsignedbits( nbits )/65536.0f;
 			} else {
-				m.sx = m.sy = 0x10000;
+				m.sx = m.sy = 1.0f;
 			}
 
 			if ( getbits( 1 ) ) { // has rotation
 				nbits = getbits( 5 );
-				m.r0 = getsignedbits( nbits );
-				m.r1 = getsignedbits( nbits );
+				m.r0 = (float)getsignedbits( nbits )/65536.0f;
+				m.r1 = (float)getsignedbits( nbits )/65536.0f;
 			} else {
-				m.r0 = m.r1 = 0x0;	
+				m.r0 = m.r1 = 0.0f;	
 			}
 
 			nbits = getbits( 5 );
-			m.tx = getsignedbits( nbits );
-			m.ty = getsignedbits( nbits );
+			m.tx = (float)getsignedbits( nbits ) / SWF_TWIPS;
+			m.ty = (float)getsignedbits( nbits ) / SWF_TWIPS;
 		}
 		
 		inline int32_t getCurrentPos() const {
@@ -130,18 +130,20 @@ namespace MonkSWF {
 			_cur = 0;
 			_bitpos = 0;
 		}
-		
-		inline char* getString() {
+
+        inline const char* getString() {
 			const char *src = (const char *)&_data[_cur];
 			size_t len = strlen(src) + 1;
+			_cur += len;
+            return src;
+            /*
 			char *dst = new char[len];
 			strcpy(dst, src);
-			_cur += len;
 			return( dst );
+            */
 		}
-		
-		
-	private:
+
+    private:
 	
 		char*		_data;
 		int32_t		_sz;		// total size of the buffer
