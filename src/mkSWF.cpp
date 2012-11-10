@@ -14,6 +14,7 @@
 #include "tags/RemoveObject.h"
 #include "tags/DefineSprite.h"
 
+
 namespace MonkSWF {
 	
 	SWF::SWF()
@@ -37,21 +38,21 @@ namespace MonkSWF {
 
 	SWF::~SWF()
     {
+		// foreach frames in sprite
+		FrameList::iterator it = _frame_list.begin();
+		while (_frame_list.end() != it)
         {
-            FrameList::iterator it = _frame_list.begin();
-            while(_frame_list.end() != it)
+			// foreach tags in frame
+			TagList *_tag_list = *it;
+            TagList::iterator tag_it = _tag_list->begin();
+            while(_tag_list->end() != tag_it)
             {
-                delete *it;
-                ++it;
+                delete *tag_it;
+                ++tag_it;
             }
-        }
-        {
-            TagList::iterator it = _tag_list.begin();
-            while(_tag_list.end() != it)
-            {
-                delete *it;
-                ++it;
-            }
+
+            delete *it;
+            ++it;
         }
     }
 
@@ -60,18 +61,17 @@ namespace MonkSWF {
         mpRenderer = renderer;
 		
 		// setup the factories
-		addFactory( ENDTAG, EndTag::create );
+		addFactory( ENDTAG,			EndTag::create );
 		
-		addFactory( DEFINESHAPE, DefineShapeTag::create );		// DefineShape
-		addFactory( DEFINESHAPE2, DefineShapeTag::create );		// DefineShape2
-		addFactory( DEFINESHAPE3, DefineShapeTag::create );		// DefineShape3
-		addFactory( DEFINESHAPE4, DefineShapeTag::create );		// DefineShape4
+		addFactory( DEFINESHAPE,	DefineShapeTag::create );		// DefineShape
+		addFactory( DEFINESHAPE2,	DefineShapeTag::create );		// DefineShape2
+		addFactory( DEFINESHAPE3,	DefineShapeTag::create );		// DefineShape3
+		addFactory( DEFINESHAPE4,	DefineShapeTag::create );		// DefineShape4
 
-		addFactory( DEFINESPRITE, DefineSpriteTag::create );
-		addFactory( PLACEOBJECT2, PlaceObject2Tag::create );
-		addFactory( REMOVEOBJECT2, RemoveObjectTag::create );
-		addFactory( SHOWFRAME, ShowFrameTag::create );
-		
+		addFactory( DEFINESPRITE,	DefineSpriteTag::create );
+		addFactory( PLACEOBJECT2,	PlaceObject2Tag::create );
+		addFactory( REMOVEOBJECT2,	RemoveObjectTag::create );
+		addFactory( SHOWFRAME,		ShowFrameTag::create );
 		
 		return true;
 	}
@@ -85,100 +85,56 @@ namespace MonkSWF {
 		TagHeader *tag_header = &oHeader;//new TagHeader();
 		tag_header->read( reader );
 				
-		// get all tags and build display and frame lists
-		DisplayList* display_list = new DisplayList();
+		// get all tags and build frame lists
+		TagList* frame_tags = new TagList;
 		while( tag_header->code() != 0 ) { // while not the end tag 
-		
-			TagFactoryMapIter factory = _tag_factories.find( tag_header->code() );
-			ITag* tag = 0;
-			
-			if( factory != _tag_factories.end() && factory->second ) {
-				tag = factory->second( tag_header );
-                _tag_list.push_back(tag);
+			ITag* tag = NULL;
+			TagFactoryFunc factory = getTagFactory( tag_header->code() );
+			if ( factory ) {
+				tag = factory( tag_header );
 
 				int32_t end_pos = reader->getCurrentPos() + tag->length();
-				
-				if( tag_header->code() == DEFINESHAPE || tag_header->code() == DEFINESHAPE2 
-				   || tag_header->code() == DEFINESHAPE3 || tag_header->code() == DEFINESHAPE4 ) {
-					_shape_dictionary.push_back( (IDefineShapeTag*)tag );
-				}
-				/*
-				if ( tag_header->code() == DEFINESPRITE ) {		// tell the sprite about the SWF...
-					IDefineSpriteTag* sprite = (IDefineSpriteTag*)tag;
-					sprite->setSWF(this);
-				}
-				*/
 				tag->read( reader, this );
+				tag->print();
 				reader->align();
+
 				int32_t dif = end_pos - reader->getCurrentPos();
 				if( dif != 0 ) {
-					cout << "WARNING: tag not read correctly. trying to skip. " << dif << endl;
-					cout << "\t\t"; tag->print();
+					MK_TRACE("WARNING: tag not read correctly. trying to skip.\n");
 					reader->skip( dif );
 				}
-					
+
+				if( tag_header->code() == DEFINESHAPE || tag_header->code() == DEFINESHAPE2 
+				   || tag_header->code() == DEFINESHAPE3 || tag_header->code() == DEFINESHAPE4 ) {
+					IDefineShapeTag* shape = (IDefineShapeTag*)tag;
+					addShape( shape, shape->shapeId() );
+				}
 
 				if ( tag_header->code() == DEFINESPRITE ) {
 					IDefineSpriteTag* sprite = (IDefineSpriteTag*)tag;
 					addSprite( sprite, sprite->spriteId() );
 				}
-				
-				
-				if( tag_header->code() == PLACEOBJECT2 ) {	//PlaceObject2
-					IPlaceObjectTag* place_obj = (IPlaceObjectTag*)tag;
-					
-					if ( place_obj->doMove() == false && place_obj->hasCharacter() == true ) {
-						// A new character (with ID of CharacterId) is placed on the display list at the specified
-						// depth. Other fields set the attributes of this new character.
-						IPlaceObjectTag* current_obj = (*display_list)[ place_obj->depth() ];
-						// copy over the previous matrix if the new character doesn't have one
-						if ( current_obj && place_obj->hasMatrix() == false ) {
-							place_obj->copyTransform( current_obj );
-						}
-						(*display_list)[ place_obj->depth() ] = place_obj;
-						
-					} else if ( place_obj->doMove() == true && place_obj->hasCharacter() == false ) {
-						// The character at the specified depth is modified. Other fields modify the attributes of this
-						// character. Because any given depth can have only one character, no CharacterId is required.
-						IPlaceObjectTag* current_obj = (*display_list)[ place_obj->depth() ];
-						if ( current_obj ) {
-							place_obj->setCharacterId( current_obj->characterId() );
-							(*display_list)[ place_obj->depth() ] = place_obj;
-						}
-					} else if ( place_obj->doMove() == true && place_obj->hasCharacter() == true ) {
-						// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
-						// is placed at that depth. Other fields set the attributes of this new character.
-						(*display_list)[ place_obj->depth() ] = place_obj;
-					}
-					
+
+				if ( tag_header->code() == SHOWFRAME ) {	// ShowFrame
+					_frame_list.push_back( frame_tags );
+					frame_tags = new TagList;
+					delete tag;
+				} else {
+					frame_tags->push_back( tag );
 				}
-				
-				if( tag_header->code() == SHOWFRAME ) {	// ShowFrame
-					_frame_list.push_back( display_list );
-					DisplayList *new_display_list = new DisplayList( display_list->begin(), display_list->end() );
-					display_list = new_display_list;
-					//cout << "### SHOWFRAME ###" << endl;
-				}
-				
-				if( tag_header->code() == REMOVEOBJECT2 ) {
-					IRemoveObjectTag* remove_object = (IRemoveObjectTag*)tag;
-					display_list->erase( remove_object->depth() );
-				}
-				
-				//tag->print();
 					
 			} else {	// no registered factory so skip this tag
-				//cout << "*** SKIPPING UNKOWN TAG ***" << endl;
+				MK_TRACE("*** SKIPPING UNKOWN TAG *** ");
 				tag_header->print();
 				reader->skip( tag_header->length() );
 				//delete tag_header;
 			}
-
 			
 			//tag_header = new TagHeader();
 			tag_header->read( reader );
 		}
-		delete display_list;
+
+		delete frame_tags;
 		return true;
 	}
 	
@@ -189,7 +145,7 @@ namespace MonkSWF {
 	void SWF::play( float delta ) {
         _accumulator += delta;
         const float secondPerFrame = getFrameRate();
-        if (secondPerFrame <= _accumulator)
+        while (secondPerFrame <= _accumulator)
         {
             ++_frame;
             if (getFrameCount() <= _frame)
@@ -198,7 +154,7 @@ namespace MonkSWF {
         }
     }
 
-	void SWF::drawFrame( int32_t frame_idx ) {
+	void SWF::drawFrame( int32_t frame ) {
 #ifdef USE_OPENVG
 		// make sure we use even odd fill rule
 		vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
@@ -212,17 +168,21 @@ namespace MonkSWF {
 		vgGetMatrix( oldMatrix );
 		vgMultMatrix( _rootTransform );
 #endif
-		DisplayList *display_list = _frame_list[ frame_idx ];
-		for (DisplayListIter iter = display_list->begin(); iter != display_list->end(); iter++ ) {
+        MK_ASSERT ( 0 <= frame && frame < getFrameCount() );
+
+        // build up the display list
+		TagList* frame_tags = _frame_list[ frame ];
+		setup_frame(_display_list, *frame_tags);
+
+		DisplayList::iterator iter = _display_list.begin();
+		while ( _display_list.end() != iter )
+		{
 			IPlaceObjectTag *place_obj = iter->second;
-			if( place_obj ) {
-				VGfloat offset[2];
-				getOffsetTranslate( offset );
-				place_obj->setOffsetTranslate( offset );
-				place_obj->setOffsetScale( getOffsetScale() );
-				place_obj->draw( this );
-			}
+			if (place_obj) 
+				place_obj->draw( this ); 
+			++iter;
 		}
+
 #ifdef USE_OPENVG
 		// restore old matrix
 		vgLoadMatrix( oldMatrix );

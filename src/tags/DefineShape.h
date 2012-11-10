@@ -11,11 +11,45 @@
 #define __DefineShape_h__
 
 #include "mkTag.h"
-#include <MonkVG/openvg.h>
-//#include <MonkVG/vgu.h>
 #include <vector>
 #include <list>
 #include <map>
+
+typedef float          VGfloat;
+typedef signed char    VGbyte;
+typedef unsigned char  VGubyte;
+typedef signed short   VGshort;
+typedef signed int     VGint;
+typedef unsigned int   VGuint;
+typedef unsigned int   VGbitfield;
+typedef VGuint VGHandle;
+#define VG_INVALID_HANDLE ((VGHandle)0)
+typedef VGHandle VGPath;
+typedef VGHandle VGImage;
+typedef VGHandle VGMaskLayer;
+typedef VGHandle VGFont;
+typedef VGHandle VGPaint;
+
+#ifndef VG_MAX_ENUM
+#define VG_MAX_ENUM 0x7FFFFFFF
+#endif
+#ifndef VG_API_CALL
+#define VG_API_CALL
+#endif
+#ifndef VG_API_ENTRY
+#define VG_API_ENTRY
+#endif
+#ifndef VG_API_EXIT
+#define VG_API_EXIT
+#endif
+#ifndef VGU_API_ENTRY
+#define VGU_API_ENTRY
+#endif
+#ifndef VGU_API_EXIT
+#define VGU_API_EXIT
+#endif
+
+
 using namespace std;
 
 namespace MonkSWF {
@@ -70,8 +104,8 @@ namespace MonkSWF {
 		}
 		
 		void print() {
-			cout << "FillStyle: " << int(_type) << endl;
-			cout << "\tColor: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
+			//cout << "FillStyle: " << int(_type) << endl;
+			//cout << "\tColor: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
 		}
 		
 		uint64_t hash() const {
@@ -112,9 +146,9 @@ namespace MonkSWF {
 		}
 		
 		void print() {
-			cout << "LineStyle: " << endl;
-			cout << "\tWidth: " << _width << endl;
-			cout << "\tColor: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
+			//cout << "LineStyle: " << endl;
+			//cout << "\tWidth: " << _width << endl;
+			//cout << "\tColor: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
 		}
 		
 	private:

@@ -13,7 +13,7 @@
 #include <GL/freeglut.h>
 #include <map>
 #include <string>
-
+#include <time.h>
 #include "SOIL.h"
 
 #if 1
@@ -176,12 +176,17 @@ void keyboard(unsigned char key, int x, int y)
 	}
 }
 
-const int framePeriod = 16;
-void Timer(int delta)
+const int kMilliSecondPerFrame = 16;
+static clock_t siLastTick = 0;
+
+void Timer(int)
 {
-    if (gpSWF) gpSWF->play(0.016f);
+	clock_t tick = clock();
+	float delta = float(tick - siLastTick) *0.001f;
+	siLastTick = tick;
+    if (gpSWF) gpSWF->play(delta);
 	glutPostRedisplay();
-	glutTimerFunc(framePeriod, Timer, 0);
+	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 }
 
 int _tmain(int argc, char* argv[])
@@ -204,13 +209,14 @@ int _tmain(int argc, char* argv[])
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
-	glutTimerFunc(framePeriod, Timer, 0);
+	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    // glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, colorFactor);
     glDepthMask(false);
+
 #if 1
     char *filename = argv[1];
     FILE *fp = fopen(filename,"rb");
@@ -228,7 +234,8 @@ int _tmain(int argc, char* argv[])
     delete [] pBuffer;
 #endif
 
-    glutMainLoop();
+	siLastTick = clock();
+	glutMainLoop();
 
 	return 0;
 }

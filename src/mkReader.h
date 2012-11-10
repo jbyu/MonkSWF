@@ -12,7 +12,7 @@
 
 #include "mkCommon.h"
 #include "mkTypes.h"
-#include <cstring>
+#include <string.h>
 
 namespace MonkSWF {
 	
@@ -75,10 +75,10 @@ namespace MonkSWF {
 		
 		inline void getRectangle( RECT& rect ) {
 			const int32_t nbits = (int32_t) getbits( 5 );
-			rect.xmin = getsignedbits( nbits ) / SWF_TWIPS;
-			rect.xmax = getsignedbits( nbits ) / SWF_TWIPS;
-			rect.ymin = getsignedbits( nbits ) / SWF_TWIPS;
-			rect.ymax = getsignedbits( nbits ) / SWF_TWIPS;	
+			rect.xmin = getsignedbits( nbits ) * SWF_INV_TWIPS;
+			rect.xmax = getsignedbits( nbits ) * SWF_INV_TWIPS;
+			rect.ymin = getsignedbits( nbits ) * SWF_INV_TWIPS;
+			rect.ymax = getsignedbits( nbits ) * SWF_INV_TWIPS;
 		}
 		
 		inline void getMatrix( MATRIX& m ) {

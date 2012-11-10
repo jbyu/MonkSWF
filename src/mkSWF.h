@@ -62,35 +62,35 @@ namespace MonkSWF {
 		}
 		
 		TagFactoryFunc getTagFactory( uint32_t tag_code ) {
-			TagFactoryMapIter factory = _tag_factories.find( tag_code );
-			
-			if( factory != _tag_factories.end() && factory->second ) {
+			TagFactoryMap::iterator factory = _tag_factories.find( tag_code );
+
+			if (_tag_factories.end() != factory)
 				return factory->second;
-			}
-			
-			return 0;
+
+			return NULL;
 		}
 		
 		IDefineShapeTag* getShape( uint16_t i ) {		// todo: change to map instead of vector
-		
-			for ( ShapeDictionaryIter it = _shape_dictionary.begin(); it != _shape_dictionary.end(); it++ ) {
-				IDefineShapeTag* shape = *it;
-				if( i == shape->shapeId() )
-					return shape;
+			ShapeDictionary::iterator it = _shape_dictionary.find( i );
+			if (it == _shape_dictionary.end() ) {
+				return NULL;
 			}
-			
-			return 0;
+			return it->second;
 		}
 		
 		int32_t numShapes() const {
 			return _shape_dictionary.size();
 		}
-		
+
+		void addShape( IDefineShapeTag* shape, uint16_t cid ) {
+			_shape_dictionary[cid] = shape;
+		}
+
+#if 0		
 		IDefineShapeTag* shapeAt( int32_t idx ) {
 			return _shape_dictionary[idx];
 		}
-		
-		IDefineSpriteTag* spriteAt( int32_t idx ) {
+		IDefineSpriteTag* spriteAt( uint32_t idx ) {
 			if ( _sprite_dictionary.size() == 0 || idx >= _sprite_dictionary.size() ) {
 				return 0;
 			}
@@ -98,14 +98,16 @@ namespace MonkSWF {
 			advance(i, idx);
 			return i->second;
 		}
-		
+#endif
+
 		IDefineSpriteTag* getSprite( uint16_t i ) {
 			SpriteDictionary::iterator it = _sprite_dictionary.find( i );
 			if (it == _sprite_dictionary.end() ) {
-				return 0;
+				return NULL;
 			}
 			return it->second;
 		}
+
 		int32_t numSprites() const {
 			return _sprite_dictionary.size();
 		}
@@ -113,6 +115,7 @@ namespace MonkSWF {
 		void addSprite( IDefineSpriteTag* sprite, uint16_t cid ) {
 			_sprite_dictionary[cid] = sprite;
 		}
+
 		/*
 		int32_t numFrames() const {
 			return _frame_list.size();
@@ -123,8 +126,8 @@ namespace MonkSWF {
 		}
 		
 		void drawFrame( int32_t frame_idx );
-        void draw(void) { drawFrame(_frame); }
-        void play(float delta);
+		void draw(void) {drawFrame(_frame);} 
+		void play(float delta);
 
 		float getFrameWidth() const {
 			return _header.getFrameWidth();
@@ -143,13 +146,16 @@ namespace MonkSWF {
 			_offsetTranslate[0] = t[0];
 			_offsetTranslate[1] = t[1];
 		}
+
 		void getOffsetTranslate( float t[2] ) const  {
 			t[0] = _offsetTranslate[0];
 			t[1] = _offsetTranslate[1];
 		}
+
 		void setOffsetScale( float s ) {
 			_offsetScale = s;
 		}
+
 		float getOffsetScale() const {
 			return _offsetScale;
 		}
@@ -162,29 +168,20 @@ namespace MonkSWF {
 		void getRootTransform( float t[9] ) {
 			for( int i = 0; i < 9; i++ )
 				t[i] = _rootTransform[i];
-			
 		}
-		
-		
-		
 		
 	private:
 		typedef std::map< uint32_t, SWF::TagFactoryFunc >	TagFactoryMap;
-		typedef TagFactoryMap::iterator						TagFactoryMapIter;
-		typedef std::vector< IDefineShapeTag* >				ShapeDictionary;
-		typedef ShapeDictionary::iterator					ShapeDictionaryIter;
+		typedef std::map< uint16_t, IDefineShapeTag* >		ShapeDictionary;
 		typedef std::map< uint16_t, IDefineSpriteTag* >		SpriteDictionary;
-		typedef std::map< uint16_t, IPlaceObjectTag* >		DisplayList;
-		typedef DisplayList::iterator						DisplayListIter;
-		typedef std::vector< DisplayList* >					FrameList;
-		typedef FrameList::iterator							FrameListIter;
-		
-        typedef std::vector< ITag* >					TagList;
+		//typedef std::vector< DisplayList* >					FrameList;
 		
 		ShapeDictionary		_shape_dictionary;
 		SpriteDictionary	_sprite_dictionary;
-		DisplayList			_display_list;
 		FrameList			_frame_list;
+		DisplayList			_display_list;
+
+
 		Header				_header;
 		TagFactoryMap		_tag_factories;
 		Reader*				_reader;
@@ -196,10 +193,7 @@ namespace MonkSWF {
 		float				_rootTransform[9];
 		float               _accumulator;
 
-
-		TagList             _tag_list;
         Renderer            *mpRenderer;
-	
 	};
 }
 #endif // __mkSWF_h__

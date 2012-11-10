@@ -11,13 +11,19 @@
 #define __mkTag_h__
 
 #include "mkReader.h"
-#include <iostream>
 #include <vector>
+#include <map>
+//#include <iostream>
 
 namespace MonkSWF {
 	
 	class SWF;
-	using namespace std;
+	class ITag;
+	class IPlaceObjectTag;
+
+	typedef std::map<uint16_t, IPlaceObjectTag*>	DisplayList;
+	typedef std::vector<ITag*>						TagList;
+	typedef std::vector<TagList*>					FrameList;
 	
 	class TagHeader {
 	public:
@@ -77,7 +83,7 @@ namespace MonkSWF {
 		
 		virtual bool read( Reader* reader, SWF* _swf ) { return true; }
 		virtual void print() {
-			std::cout << "END TAG" << std::endl;
+			MK_TRACE("END TAG\n");
 		}
 		
 		static ITag* create( TagHeader* header ) {
@@ -167,20 +173,16 @@ namespace MonkSWF {
 			return _character_id;
 		}
 		void setCharacterId( uint16_t i ) { _character_id = i; }
-		bool hasCharacter() const { return _has_character; }
+		bool hasCharacter() const { return 0!=_has_character; }
 		
-		bool hasMatrix() const { return _has_matrix; }
+		bool hasMatrix() const { return 0!=_has_matrix; }
 		
 		bool doMove() {
 			return !_has_character && _do_move;
 		}
-		
-		virtual void setOffsetTranslate( float t[2] ) = 0;
-		virtual void getOffsetTranslate( float t[2] ) const = 0;
-		virtual void setOffsetScale( float s ) = 0;
-		virtual float offsetScale() const = 0;
-		
-    	virtual ~IPlaceObjectTag() {
+	
+    	virtual ~IPlaceObjectTag()
+		{
 		}
 
 	protected:

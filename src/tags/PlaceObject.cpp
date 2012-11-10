@@ -9,7 +9,7 @@
 
 #include "PlaceObject.h"
 #include "mkSWF.h"
-#include <iostream>
+
 using namespace std;
 
 #define vgLoadMatrix (void)
@@ -20,10 +20,10 @@ using namespace std;
 
 namespace MonkSWF {
     
-	bool PlaceObject2Tag::read( Reader* reader, SWF* _swf ) {
-	
+	bool PlaceObject2Tag::read( Reader* reader, SWF* _swf )
+	{
 		if( reader->getBitPos() )
-			cout << "UNALIGNED!" << endl;
+			MK_TRACE("UNALIGNED!!\n");
 		uint8_t has_clip_actions = reader->getbits( 1 );
 		uint8_t has_clip_depth = reader->getbits( 1 );
 		uint8_t has_name = reader->getbits( 1 );
@@ -170,7 +170,7 @@ namespace MonkSWF {
 	void PlaceObject2Tag::draw( SWF* swf ) {
         PVRTMATRIX3f origMtx = goMatrix, mtx;
         PVRTMatrixSet(mtx, _transfrom);
-        PVRTMatrixMultiply(goMatrix, mtx,goMatrix);
+        PVRTMatrixMultiply(goMatrix, mtx, goMatrix);
         /*
         vgGetMatrix(oldMatrix);
 		vgMultMatrix( (VGfloat*)&_transform[0][0] );
@@ -196,8 +196,8 @@ namespace MonkSWF {
 	}
 	
 	void PlaceObject2Tag::print() {
-		cout << "PLACEOBJECT2: id = " << _character_id << " depth = " << _depth << " DoMove = " << doMove() << endl;
 		_header.print();
+		MK_TRACE("\tPLACEOBJECT2: id=%d, depth=%d, move=%d\n", _character_id, _depth, doMove() );
 	}
 
 }

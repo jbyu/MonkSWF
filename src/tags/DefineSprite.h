@@ -11,10 +11,11 @@
 #define __DefineSprite_h__
 
 #include "mkTag.h"
-//#include <VG/openvg.h>
 #include <map>
 
 namespace MonkSWF {
+
+	void setup_frame(DisplayList& display, const TagList& tags);
 
 	class DefineSpriteTag : public IDefineSpriteTag {
 	public:
@@ -52,16 +53,8 @@ namespace MonkSWF {
 		static ITag* create( TagHeader* header );
 		
 	private:
-		typedef std::map< uint16_t, IPlaceObjectTag* >		DisplayList;
-		typedef DisplayList::iterator						DisplayListIter;
-
-		typedef std::vector<ITag*>		FrameTagList;
-		typedef vector<FrameTagList*>	FrameList;
-		FrameList		_frames;
-
+		FrameList		_frame_list;
 		DisplayList		_display_list;
-		
-        FrameTagList    _tag_list;
 
 		float		_translate[2];
 		float		_scale;

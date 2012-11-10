@@ -8,7 +8,7 @@
  */
 
 #include "mkTag.h"
-#include <iostream>
+
 using namespace std;
 
 namespace MonkSWF {
@@ -25,7 +25,6 @@ namespace MonkSWF {
 	}
 	
 	void TagHeader::print() {
-		cout << "code: "	<< _code << endl;
-		cout << "length: "	<< _length << endl;
+		MK_TRACE("code:%2d, length:%d\n",  _code , _length);
 	}
 }

@@ -19,6 +19,7 @@ namespace MonkSWF {
 	#define coord_t_MIN -0x80000000
 	
     const int SWF_TWIPS	= 20;
+	const float SWF_INV_TWIPS = 1.f / SWF_TWIPS;
 
 	// Basic Structures
 	
@@ -43,10 +44,10 @@ namespace MonkSWF {
 	
 	struct RECT
 	{ 
-		coord_t        xmin;
-		coord_t        ymin;
-		coord_t        xmax;
-		coord_t        ymax;
+		float        xmin;
+		float        ymin;
+		float        xmax;
+		float        ymax;
 	};
 	
 	struct MATRIX { 

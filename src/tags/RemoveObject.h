@@ -9,8 +9,9 @@
 
 #ifndef __RemoveObject_h__
 #define __RemoveObject_h__
+
 #include "mkTag.h"
-#include <iostream>
+
 using namespace std;
 
 namespace MonkSWF {
@@ -34,9 +35,9 @@ namespace MonkSWF {
 		
 		virtual void print() {
 			if( code() == REMOVEOBJECT )
-				cout << "REMOVEOBJECT id = " << _character_id << " depth = " << _depth << endl;
+				MK_TRACE("REMOVEOBJECT id=%d, depth=%d\n", _character_id, _depth);
 			else
-				cout << "REMOVEOBJECT2 depth = " << _depth << endl;
+				MK_TRACE("REMOVEOBJECT2 depth=%d\n", _depth);
 		}
 		
 		static ITag* create( TagHeader* header ) {

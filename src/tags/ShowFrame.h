@@ -28,7 +28,7 @@ namespace MonkSWF {
 		}
 
 		virtual void print() {
-			cout << "SHOWFRAME" << endl;
+			MK_TRACE("SHOWFRAME\n");
 		}
 		
 		static ITag* create( TagHeader* header ) {

@@ -14,7 +14,7 @@
 #define MAX_BUFFER 1000000
 #endif
 
-#include <iostream>
+
 using namespace std;
 
 short int endianSwap16(short int val)
@@ -97,13 +97,13 @@ namespace MonkSWF {
 	}
 	
 	void Header::print() {
-		cout << "signature: "		<< _signature[0] << _signature[1] << _signature[2] << endl;
-		cout << "version: "			<< (int)_version << endl; 
-		cout << "file length: "		<< _file_length << endl;
-		cout << "frame width: "		<< ((_frame_size.xmax - _frame_size.xmin)/20.0f) << endl;
-		cout << "frame height: "	<< ((_frame_size.ymax - _frame_size.ymin)/20.0f) << endl;
-		cout << "frame rate: "		<< _frame_rate << endl;
-		cout << "frame count: "		<< _frame_count << endl;
+		MK_TRACE("signature:\t%c%c%c\n",	_signature[0], _signature[1], _signature[2]);
+		MK_TRACE("version:\t\t%d\n",		 _version); 
+		MK_TRACE("file length:\t%d\n",		_file_length);
+		MK_TRACE("frame width:\t%f\n",		getFrameWidth());
+		MK_TRACE("frame height:\t%f\n",		getFrameHeight());
+		MK_TRACE("frame rate:\t%f\n",		_frame_rate);
+		MK_TRACE("frame count:\t%d\n",		_frame_count);
 	}
 	
 }

@@ -12,9 +12,11 @@
 #include "DefineShape.h"
 #include "mkSWF.h"
 #include <list>
-#include <iostream>
+
 #include <iterator>
 #include <algorithm>
+#include <openvg.h>
+
 
 using namespace std;
 
@@ -23,7 +25,7 @@ using namespace std;
 #define vgCreatePaint()     1
 #define vgAppendPathData    (void)
 #define vgGetParameteri     1;(void)
-#define vgCreatePath()      1
+#define vgCreatePath		1;(void)
 #define vgDrawPath          (void)
 #define vgSetf              (void)
 #define vgSetPaint          (void)
@@ -149,9 +151,9 @@ namespace MonkSWF {
 		}
 		
 		virtual void print() {
-			cout << "\tStraightEdge: " << _is_reversed << endl;
-			cout << "\t\tstart: " << _start[0] << ", " << _start[1] << endl;
-			cout << "\t\tend: " << _end[0] << ", " << _end[1] << endl;
+			//cout << "\tStraightEdge: " << _is_reversed << endl;
+			//cout << "\t\tstart: " << _start[0] << ", " << _start[1] << endl;
+			//cout << "\t\tend: " << _end[0] << ", " << _end[1] << endl;
 		}
 		
 		VGfloat _start[2];
@@ -223,9 +225,9 @@ namespace MonkSWF {
 		}
 		
 		virtual void print() {
-			cout << "\tCurvedEdge:" << endl;
-			cout << "\t\tstart: " << _start[0] << ", " << _start[1] << endl;
-			cout << "\t\tend: " << _end[0] << ", " << _end[1] << endl;
+			//cout << "\tCurvedEdge:" << endl;
+			//cout << "\t\tstart: " << _start[0] << ", " << _start[1] << endl;
+			//cout << "\t\tend: " << _end[0] << ", " << _end[1] << endl;
 		}
 		
 		
@@ -513,6 +515,7 @@ namespace MonkSWF {
 		
 		
 		void print() {
+#if 0
 			cout << "Path: " << endl;
 			cout << "Fill Style 0: " << _fill0 << endl;
 			cout << "Fill Style 1: " << _fill1 << endl;
@@ -523,6 +526,7 @@ namespace MonkSWF {
 				IEdge* edge = *i;
 				edge->print();
 			}
+#endif
 		}
 		
 		EdgeArray	_edges;
@@ -739,12 +743,12 @@ namespace MonkSWF {
     
     void Gradient::configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color ) {
         float c[6];
-        c[0] = m.sx / double(1<<16);
-        c[1] = m.sy / double(1<<16);
-        c[2] = m.tx * 0.05;
-        c[3] = m.ty * 0.05;
-        c[4] = m.r0 / double(1<<16);
-        c[5] = m.r1 / double(1<<16);
+        c[0] = m.sx / float(1<<16);
+        c[1] = m.sy / float(1<<16);
+        c[2] = m.tx * 0.05f;
+        c[3] = m.ty * 0.05f;
+        c[4] = m.r0 / float(1<<16);
+        c[5] = m.r1 / float(1<<16);
 
         vgSetParameterfv(paint, VG_PAINT_2x3_GRADIENT, 6, &c[0]);
         
@@ -769,7 +773,7 @@ namespace MonkSWF {
         int rampStopsSize = _gradient_records.size() * 5;
         float* rampStops = new float[rampStopsSize];
         
-        for (int i = 0; i < _gradient_records.size(); i++) {
+        for (uint32_t i = 0; i < _gradient_records.size(); ++i) {
             int n = i * 5;
             rampStops[n]      = _gradient_records[i]._ratio / 255.0f;
             rampStops[n+1]    = _gradient_records[i]._color.r / 255.0f;
@@ -856,7 +860,7 @@ namespace MonkSWF {
 		const TagHeader& shape_header = define_shape_tag->header();
 		bool support_32bit_color = (shape_header.code() != DEFINESHAPE && shape_header.code() != DEFINESHAPE2);	// all shape definitions except DEFINESHAPE & DEFINESHAPE2 support 32 bit color
 																												// get the fill styles
-		uint8_t num_fill_styles = reader->get<uint8_t>();
+		uint16_t num_fill_styles = reader->get<uint8_t>();
 		if( num_fill_styles == 0xff )
 			num_fill_styles = reader->get<uint16_t>();
 		
@@ -868,7 +872,7 @@ namespace MonkSWF {
 		}
 		
 		// get the line styles
-		uint8_t num_line_styles = reader->get<uint8_t>();
+		uint16_t num_line_styles = reader->get<uint8_t>();
 		if( num_line_styles == 0xff )
 			num_fill_styles = reader->get<uint16_t>();
 		
@@ -1015,7 +1019,7 @@ namespace MonkSWF {
 				
 				if( isLine ) {
 					
-					const uint16_t nbits = reader->getbits( 4 ) + 2;
+					const uint8_t nbits = reader->getbits( 4 ) + 2;
 					const uint16_t general_line_flag = reader->getbits( 1 );
 					
 					if( general_line_flag ) {	
@@ -1063,7 +1067,7 @@ namespace MonkSWF {
 					
 				} else {	// curve
 					
-					uint16_t nbits = reader->getbits( 4 ) + 2;
+					uint8_t nbits = reader->getbits( 4 ) + 2;
 					VGfloat cxy[2];
 					VGfloat axy1[2] = { startxy[0], startxy[1] };
 					VGfloat axy2[2];
@@ -1146,17 +1150,16 @@ namespace MonkSWF {
 		_shape_id = reader->get<uint16_t>();
 		reader->getRectangle( _bounds );
 		
-		reader->skip( length()-curr );
+		reader->skip( length() - curr );
 		//_shape_with_style.read( reader, this );
 		
 		// todo: DEFINESHAPE4!		
-		// this->print();
 		return true;
 	}
 	
 	void DefineShapeTag::print() {
-		//_header.print();
-		cout << "DEFINESHAPE code = " << code() << " id = " << _shape_id << endl;
+		_header.print();
+		MK_TRACE("\tDEFINESHAPE: id=%d\n", _shape_id);
 		//		cout << "shape id: "		<< _shape_id << endl;
 		//		cout << "frame width: "		<< ((_bounds.xmax - _bounds.xmin)/20.0f) << endl;
 		//		cout << "frame height: "	<< ((_bounds.ymax - _bounds.ymin)/20.0f) << endl;
