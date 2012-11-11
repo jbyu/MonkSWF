@@ -26,6 +26,8 @@ using namespace std;
 
 namespace MonkSWF {
 
+	class MovieClip;
+
     class Renderer
     {
     public:
@@ -63,10 +65,8 @@ namespace MonkSWF {
 		
 		TagFactoryFunc getTagFactory( uint32_t tag_code ) {
 			TagFactoryMap::iterator factory = _tag_factories.find( tag_code );
-
 			if (_tag_factories.end() != factory)
 				return factory->second;
-
 			return NULL;
 		}
 		
@@ -125,8 +125,8 @@ namespace MonkSWF {
 			return _reader;
 		}
 		
-		void drawFrame( int32_t frame_idx );
-		void draw(void) {drawFrame(_frame);} 
+		void draw(void);
+
 		void play(float delta);
 
 		float getFrameWidth() const {
@@ -142,58 +142,26 @@ namespace MonkSWF {
 			return _header.getFrameCount();
 		}
 		
-		void setOffsetTranslate( const float t[2] ) {
-			_offsetTranslate[0] = t[0];
-			_offsetTranslate[1] = t[1];
-		}
+		MovieClip *createMovieClip(const IDefineSpriteTag &tag);
 
-		void getOffsetTranslate( float t[2] ) const  {
-			t[0] = _offsetTranslate[0];
-			t[1] = _offsetTranslate[1];
-		}
-
-		void setOffsetScale( float s ) {
-			_offsetScale = s;
-		}
-
-		float getOffsetScale() const {
-			return _offsetScale;
-		}
-		
-		void setRootTransform( const float t[9] ) {
-			for( int i = 0; i < 9; i++ )
-				_rootTransform[i] = t[i];
-		}
-		
-		void getRootTransform( float t[9] ) {
-			for( int i = 0; i < 9; i++ )
-				t[i] = _rootTransform[i];
-		}
-		
 	private:
 		typedef std::map< uint32_t, SWF::TagFactoryFunc >	TagFactoryMap;
 		typedef std::map< uint16_t, IDefineShapeTag* >		ShapeDictionary;
 		typedef std::map< uint16_t, IDefineSpriteTag* >		SpriteDictionary;
-		//typedef std::vector< DisplayList* >					FrameList;
+		typedef std::vector<MovieClip*>						MovieList;
+
+		float               _elapsedAccumulator;
 		
 		ShapeDictionary		_shape_dictionary;
 		SpriteDictionary	_sprite_dictionary;
 		FrameList			_frame_list;
-		DisplayList			_display_list;
-
-
+		MovieList			_movie_list;
 		Header				_header;
 		TagFactoryMap		_tag_factories;
-		Reader*				_reader;
-		int32_t				_frame;
-		
-		// offset
-		float				_offsetTranslate[2];
-		float				_offsetScale;
-		float				_rootTransform[9];
-		float               _accumulator;
 
+		Reader*				_reader;
         Renderer            *mpRenderer;
+		MovieClip			*mpMovieClip;
 	};
 }
 #endif // __mkSWF_h__

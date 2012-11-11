@@ -18,22 +18,10 @@
 namespace MonkSWF {
 	
 	SWF::SWF()
-	:_offsetScale( 1 )
-    ,_frame(0)
-    ,_accumulator(0)
+	:_elapsedAccumulator(0.0f)
     ,mpRenderer(NULL)
+	,mpMovieClip(NULL)
 	{
-		_offsetTranslate[0] = 0;
-		_offsetTranslate[1] = 0;
-		
-		for ( int i = 0; i < 9; i++ ) {
-			_rootTransform[i] = 0;
-		}
-		// set root tranform to identity
-		_rootTransform[0] = 1;
-		_rootTransform[4] = 1;
-		_rootTransform[8] = 1;
-		
 	}
 
 	SWF::~SWF()
@@ -50,11 +38,29 @@ namespace MonkSWF {
                 delete *tag_it;
                 ++tag_it;
             }
-
+			// delete container
             delete *it;
             ++it;
         }
+		// foreach movieclip in sprite
+		MovieList::iterator mit = _movie_list.begin();
+		while (_movie_list.end() != mit)
+        {
+            delete *mit;
+            ++mit;
+        }
+		// swf movie
+		delete mpMovieClip;
+		mpMovieClip = NULL;
     }
+
+	MovieClip *SWF::createMovieClip(const IDefineSpriteTag &tag)
+	{
+		const DefineSpriteTag& spriteImpl = (const DefineSpriteTag&) tag;
+		MovieClip *movie = new MovieClip( spriteImpl.getFrameList() );
+		_movie_list.push_back(movie);
+		return movie;
+	}
 
 
 	bool SWF::initialize(Renderer *renderer) {
@@ -135,26 +141,29 @@ namespace MonkSWF {
 		}
 
 		delete frame_tags;
+		MK_ASSERT(_frame_list.size() == getFrameCount());
+		mpMovieClip = new MovieClip( _frame_list );
+		mpMovieClip->setFrame( 0 );
 		return true;
 	}
 	
-	void SWF::print() {
+	void SWF::print()
+	{
 		_header.print();
 	}
 	
-	void SWF::play( float delta ) {
-        _accumulator += delta;
+	void SWF::play( float delta )
+	{
+        _elapsedAccumulator += delta;
         const float secondPerFrame = getFrameRate();
-        while (secondPerFrame <= _accumulator)
+        while (secondPerFrame <= _elapsedAccumulator)
         {
-            ++_frame;
-            if (getFrameCount() <= _frame)
-                _frame = 0;
-            _accumulator -= secondPerFrame;
-        }
+            _elapsedAccumulator -= secondPerFrame;
+			mpMovieClip->setFrame( mpMovieClip->getFrame() + 1 );
+		}
     }
 
-	void SWF::drawFrame( int32_t frame ) {
+	void SWF::draw(void) {
 #ifdef USE_OPENVG
 		// make sure we use even odd fill rule
 		vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
@@ -168,20 +177,8 @@ namespace MonkSWF {
 		vgGetMatrix( oldMatrix );
 		vgMultMatrix( _rootTransform );
 #endif
-        MK_ASSERT ( 0 <= frame && frame < getFrameCount() );
 
-        // build up the display list
-		TagList* frame_tags = _frame_list[ frame ];
-		setup_frame(_display_list, *frame_tags);
-
-		DisplayList::iterator iter = _display_list.begin();
-		while ( _display_list.end() != iter )
-		{
-			IPlaceObjectTag *place_obj = iter->second;
-			if (place_obj) 
-				place_obj->draw( this ); 
-			++iter;
-		}
+		mpMovieClip->draw( this );
 
 #ifdef USE_OPENVG
 		// restore old matrix

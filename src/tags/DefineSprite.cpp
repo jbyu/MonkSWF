@@ -88,7 +88,7 @@ namespace MonkSWF {
 		}
 		MK_TRACE("=== DEFINESPRITE  END  ===\n");
         delete frame_tags;
-		_currFrame = 0;
+		MK_ASSERT(_frame_list.size() == _frame_count);
 		return true;
 	}
 
@@ -96,15 +96,14 @@ namespace MonkSWF {
 		_header.print();
 		MK_TRACE("\tDEFINESPRITE: id=%d, frame_count=%d\n", _sprite_id, _frame_count);
 	}
-	
-	void DefineSpriteTag::draw( SWF* _swf ) {
-        //if ( frame < 0 || frame >= _frame_count )	return;
-        int frame = _currFrame++;
-        if (_currFrame >= _frame_count) _currFrame = 0;
 
+#if 0	
+	void DefineSpriteTag::draw( SWF* _swf, int frame)
+	{
+        MK_ASSERT ( 0 <= frame && frame < getFrameCount() );
         // build up the display list
 		TagList* frame_tags = _frame_list[ frame ];
-		setup_frame(_display_list, *frame_tags);
+		setup_frame(_display_list, *frame_tags );
 		/*
         TagList::iterator it = frame_tags->begin();
 		while( it != frame_tags->end() ) {
@@ -145,60 +144,11 @@ namespace MonkSWF {
 			++iter;
 		}
 	}
-	
+#endif	
 
 	ITag* DefineSpriteTag::create( TagHeader* header ) {
 		return (ITag*)(new DefineSpriteTag( *header ));
 	}
 
-
-	void setup_frame(DisplayList& display, const TagList& tags)
-	{
-        TagList::const_iterator it = tags.begin();
-		while( it != tags.end() ) {
-            ITag* tag = *it;
-			switch ( tag->code() ) {
-				case PLACEOBJECT2: {
-					IPlaceObjectTag* place_obj = (IPlaceObjectTag*)tag;
-					uint16_t depth = place_obj->depth();
-
-					if ( place_obj->doMove() == false && place_obj->hasCharacter() == true ) {
-						// A new character (with ID of CharacterId) is placed on the display list at the specified
-						// depth. Other fields set the attributes of this new character.
-						IPlaceObjectTag* current_obj = display[ depth ];
-						// copy over the previous matrix if the new character doesn't have one
-						if ( current_obj && place_obj->hasMatrix() == false ) {
-							place_obj->copyTransform( current_obj );
-						}
-						display[ depth ] = place_obj;
-						
-					} else if ( place_obj->doMove() == true && place_obj->hasCharacter() == false ) {
-						// The character at the specified depth is modified. Other fields modify the attributes of this
-						// character. Because any given depth can have only one character, no CharacterId is required.
-						IPlaceObjectTag* current_obj = display[ depth ];
-						if ( current_obj ) {
-							place_obj->setCharacterId( current_obj->characterId() );
-							display[ depth ] = place_obj;
-						}
-					} else if ( place_obj->doMove() == true && place_obj->hasCharacter() == true ) {
-						// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
-						// is placed at that depth. Other fields set the attributes of this new character.
-						display[ depth ] = place_obj;
-					}
-				} break;
-
-				case REMOVEOBJECT:
-				case REMOVEOBJECT2:	{
-					IRemoveObjectTag* remove_object = (IRemoveObjectTag*)tag;
-					display[ remove_object->depth() ] = NULL;
-					//_display_list.erase( remove_object->depth() );
-				} break;
-	
-				default:
-					break;
-			}
-            ++it;
-		}
-	}
 	
 }

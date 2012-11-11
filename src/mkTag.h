@@ -72,6 +72,7 @@ namespace MonkSWF {
 		TagHeader	_header;
 	};
 	
+//=========================================================================
 #define ENDTAG 0
 	class EndTag : public ITag {
 	public:
@@ -91,6 +92,7 @@ namespace MonkSWF {
 		}				
 	};
 	
+//=========================================================================
 #define DEFINESHAPE 2
 #define DEFINESHAPE2 22
 #define DEFINESHAPE3 32
@@ -114,24 +116,17 @@ namespace MonkSWF {
 		uint16_t			_shape_id;
 	};
 	
+//=========================================================================
 #define DEFINESPRITE 39
 	class IDefineSpriteTag : public ITag {
 	public:
-		virtual void draw(  SWF* ) = 0;
-		virtual void setTranslate( float t[2] ) = 0;
-		virtual void getTranslate( float t[2] ) const = 0;
-		virtual void setScale( float s ) = 0;
-		virtual float scale() const = 0;
-		
 		uint16_t spriteId() const {
 			return _sprite_id;
 		}
 		
-		uint16_t frameCount() const {
+		uint16_t getFrameCount() const {
 			return _frame_count;
 		}
-		
-		//void setSWF( SWF* swf ) {_swf = swf;}
 
 	protected:
 		IDefineSpriteTag( TagHeader& header )
@@ -140,67 +135,70 @@ namespace MonkSWF {
 		{}
 		
 		virtual ~IDefineSpriteTag()
-		{
-		}
+		{}
 	
 		uint16_t		_sprite_id;
 		uint16_t		_frame_count;
-		//SWF*			_swf;
 	};
 
-#define PLACEOBJECT2 0x1A 
-	class IPlaceObjectTag : public ITag {
+//=========================================================================
+#define PLACEOBJECT2	26 
+	class IPlaceObjectTag : public ITag 
+	{
 	public:
-		
-		virtual void draw( SWF* swf ) = 0;
-		virtual void copyTransform( IPlaceObjectTag* other ) = 0;
-		virtual void copyNoTransform( IPlaceObjectTag* other ) { // copies everything except transform 
-			_depth = other->_depth;
-			_character_id = other->_character_id;
-			_has_character = other->_has_character;
-			_do_move = other->_do_move;
-		}
-		
-		uint16_t depth() const {
-			return _depth;
-		}
-		
-		static bool compare( IPlaceObjectTag* a, IPlaceObjectTag* b ) {
-			return a->depth() < b->depth();
-		}
-		
-		uint16_t characterId() const {
-			return _character_id;
-		}
-		void setCharacterId( uint16_t i ) { _character_id = i; }
-		bool hasCharacter() const { return 0!=_has_character; }
-		
-		bool hasMatrix() const { return 0!=_has_matrix; }
-		
-		bool doMove() {
-			return !_has_character && _do_move;
-		}
-	
     	virtual ~IPlaceObjectTag()
 		{
 		}
 
+		virtual void play(void) = 0;
+		virtual void setFrame(uint32_t frame) = 0;
+
+		virtual void draw( SWF* swf ) = 0;
+
+		virtual void copyCharacter( IPlaceObjectTag* other ) = 0;
+
+		virtual void copyTransform( IPlaceObjectTag* other ) = 0;
+
+		virtual void copyNoTransform( IPlaceObjectTag* other ) { // copies everything except transform 
+			_depth = other->_depth;
+			_character_id = other->_character_id;
+			_has_character = other->_has_character;
+			_has_move = other->_has_move;
+		}
+		
+		uint16_t depth() const { return _depth; }
+		uint16_t characterId() const { return _character_id; }
+		bool hasCharacter() const { return 0!=_has_character; }
+		bool hasMatrix() const { return 0!=_has_matrix; }
+		bool hasMove() const { return 0!=_has_move; }
+	
+		int getFrame(void) const { return _frame; }
+
+
+		static bool compare( IPlaceObjectTag* a, IPlaceObjectTag* b ) {
+			return a->depth() < b->depth();
+		}
+
 	protected:
 		IPlaceObjectTag( TagHeader& header ) 
-		:	ITag( header )
-		,	_depth( 0 )
-		,	_character_id( 0xffff )
-		,	_has_character( 0 )
-		,	_has_matrix( 0 )
+		:ITag( header )
+		,_frame(0)
+		,_depth( 0 )
+		,_character_id( 0xffff )
+		,_has_matrix( 0 )
+		,_has_character( 0 )
+		,_has_move( 0 )
 		{}
 		
+		int			_frame;
 		uint16_t	_depth;
 		uint16_t	_character_id;
-		uint8_t		_has_character;
-		uint8_t		_do_move;
 		uint8_t		_has_matrix;
+		uint8_t		_has_character;
+		uint8_t		_has_move;
 	};
 	
+//=========================================================================
 #define SHOWFRAME 1	
 	class IShowFrameTag : public ITag {
 	protected:
@@ -212,6 +210,7 @@ namespace MonkSWF {
 		}
 	};
 
+//=========================================================================
 #define REMOVEOBJECT	5
 #define REMOVEOBJECT2	28
 	class IRemoveObjectTag : public ITag {

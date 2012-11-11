@@ -228,10 +228,6 @@
 				RelativePath="..\..\src\tags\ShowFrame.h"
 				>
 			</File>
-			<File
-				RelativePath="..\..\src\stdint.h"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

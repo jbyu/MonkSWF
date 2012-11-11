@@ -8,6 +8,7 @@
  */
 
 #include "PlaceObject.h"
+#include "DefineSprite.h"
 #include "mkSWF.h"
 
 using namespace std;
@@ -31,40 +32,26 @@ namespace MonkSWF {
 		uint8_t has_color_transform = reader->getbits( 1 );
 		_has_matrix = reader->getbits( 1 );
 		_has_character = reader->getbits( 1 );
-		_do_move = reader->getbits( 1 );
+		_has_move = reader->getbits( 1 );
 		
 		if( has_clip_actions || has_clip_depth )
 			assert( 0 );
 			
 		_depth = reader->get<uint16_t>();
 
-		if( _has_character )
+		if ( _has_character )
+		{
 			_character_id = reader->get<uint16_t>();
+			IDefineSpriteTag* sprite = _swf->getSprite( _character_id );
+			if ( sprite )
+			{
+				_pMovieClip = _swf->createMovieClip( *sprite );
+			}
+		}
 			
-		if( _has_matrix ) {
-			//MATRIX m;
+		if ( _has_matrix )
+		{
 			reader->getMatrix( _transfrom );
-			/*
-			//	OpenVG:
-			//	sx	shx	tx
-			//	shy	sy	ty
-			//	0	0	1
-			
-			// also see MATRIX in swf file format spec
-			
-			// translation
-			_transform[0][2] = m.tx/20.0f;
-			_transform[1][2] = m.ty/20.0f;
-			
-			// scale
-			_transform[0][0] = m.sx/65536.0f;
-			_transform[1][1] = m.sy/65536.0f;
-			
-			// rotate and skew
-			// note the order of r1 and r0!
-			_transform[0][1] = m.r1/65536.0f;
-			_transform[1][0] = m.r0/65536.0f;
-			*/
 		}
 		
 		if ( has_color_transform ) {
@@ -112,6 +99,13 @@ namespace MonkSWF {
 		return true;
 	}
 	
+	void PlaceObject2Tag::copyCharacter( IPlaceObjectTag* o )
+	{
+		PlaceObject2Tag* other = (PlaceObject2Tag*)o;
+        _character_id = other->_character_id;
+		_pMovieClip = other->_pMovieClip;
+	}
+
 	void PlaceObject2Tag::copyTransform( IPlaceObjectTag* o ) {
 		//copyNoTransform( o );
 		PlaceObject2Tag* other = (PlaceObject2Tag*)o;
@@ -184,11 +178,9 @@ namespace MonkSWF {
         {
 			shape->draw( swf );
         }
-		else
-        {
-			IDefineSpriteTag* sprite = swf->getSprite( _character_id );
-			if ( sprite )
-                sprite->draw( swf );
+		else if ( _pMovieClip )
+		{
+			_pMovieClip->draw( swf );
 		}
 		// restore old matrix
 		//vgLoadMatrix( oldMatrix );
@@ -197,7 +189,112 @@ namespace MonkSWF {
 	
 	void PlaceObject2Tag::print() {
 		_header.print();
-		MK_TRACE("\tPLACEOBJECT2: id=%d, depth=%d, move=%d\n", _character_id, _depth, doMove() );
+		MK_TRACE("\tPLACEOBJECT2: id=%d, depth=%d, move=%d\n", _character_id, _depth, hasMove() );
 	}
 
-}
+//=========================================================================
+
+	MovieClip::MovieClip(const FrameList& frames)
+		:_frame_list(frames)
+		,_frame_count(frames.size())
+		,_frame(0)
+	{
+	}
+
+	void MovieClip::setFrame( uint32_t frame )
+	{
+		if (_frame_count <= frame)
+		{
+			frame = 0;
+			// clear display list
+			DisplayList::iterator iter = _display_list.begin();
+			while ( _display_list.end() != iter )
+			{
+				iter->second = NULL;
+				++iter;
+			}
+		}
+        // build up the display list
+		TagList* frame_tags = _frame_list[ frame ];
+		setup_frame(_display_list, *frame_tags );
+		_frame = frame;
+	}
+
+	void MovieClip::draw( SWF* swf )
+	{
+		// draw the display list
+		DisplayList::iterator iter = _display_list.begin();
+		while ( _display_list.end() != iter )
+		{
+			IPlaceObjectTag *place_obj = iter->second;
+			if (place_obj) 
+				place_obj->draw( swf ); 
+			++iter;
+		}
+	}
+
+	void setup_frame(DisplayList& display, const TagList& tags)
+	{
+        TagList::const_iterator it = tags.begin();
+		while( it != tags.end() ) {
+            ITag* tag = *it;
+			switch ( tag->code() ) {
+				case PLACEOBJECT2: {
+					IPlaceObjectTag* place_obj = (IPlaceObjectTag*)tag;
+					uint16_t depth = place_obj->depth();
+
+					if ( place_obj->hasMove() == false && place_obj->hasCharacter() == true ) {
+						// A new character (with ID of CharacterId) is placed on the display list at the specified
+						// depth. Other fields set the attributes of this new character.
+						IPlaceObjectTag* current_obj = display[ depth ];
+						// copy over the previous matrix if the new character doesn't have one
+						if ( current_obj && place_obj->hasMatrix() == false ) {
+							place_obj->copyTransform( current_obj );
+						}
+						place_obj->setFrame(0xffffffff);
+						display[ depth ] = place_obj;
+						
+					} else if ( place_obj->hasMove() == true && place_obj->hasCharacter() == false ) {
+						// The character at the specified depth is modified. Other fields modify the attributes of this
+						// character. Because any given depth can have only one character, no CharacterId is required.
+						IPlaceObjectTag* current_obj = display[ depth ];
+						if ( current_obj ) {
+							//current_obj->copyTransform( place_obj );
+							//place_obj->setCharacterId( current_obj->characterId() );
+							place_obj->copyCharacter( current_obj );
+							display[ depth ] = place_obj;
+						}
+					} else if ( place_obj->hasMove() == true && place_obj->hasCharacter() == true ) {
+						// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
+						// is placed at that depth. Other fields set the attributes of this new character.
+						place_obj->setFrame(0xffffffff);
+						display[ depth ] = place_obj;
+					}
+				} break;
+
+				case REMOVEOBJECT:
+				case REMOVEOBJECT2:	{
+					IRemoveObjectTag* remove_object = (IRemoveObjectTag*)tag;
+					display[ remove_object->depth() ] = NULL;
+					//_display_list.erase( remove_object->depth() );
+				} break;
+	
+				default:
+					break;
+			}
+            ++it;
+		}
+		// update the display list
+		DisplayList::iterator iter = display.begin();
+		while ( display.end() != iter )
+		{
+			IPlaceObjectTag *place_obj = iter->second;
+			if (place_obj) 
+			{
+				place_obj->play();
+			}
+			++iter;
+		}
+	}
+
+}//namespace

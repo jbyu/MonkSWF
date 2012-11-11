@@ -222,7 +222,7 @@ namespace MonkSWF {
 		
 	private:
 		RECT				_bounds;
-		ShapeWithStyle		_shape_with_style;
+		//ShapeWithStyle		_shape_with_style;
 	};
 	
 	

@@ -100,8 +100,8 @@ namespace MonkSWF {
 			}
 
 			nbits = getbits( 5 );
-			m.tx = (float)getsignedbits( nbits ) / SWF_TWIPS;
-			m.ty = (float)getsignedbits( nbits ) / SWF_TWIPS;
+			m.tx = getsignedbits( nbits ) * SWF_INV_TWIPS;
+			m.ty = getsignedbits( nbits ) * SWF_INV_TWIPS;
 		}
 		
 		inline int32_t getCurrentPos() const {
