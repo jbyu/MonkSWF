@@ -51,6 +51,9 @@
     <ClInclude Include="..\..\src\tags\ShowFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\tags\SetBackgroundColor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\mkHeader.cpp">
@@ -72,12 +75,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\tags\PlaceObject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\tags\RemoveObject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\tags\ShowFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

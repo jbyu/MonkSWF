@@ -858,8 +858,9 @@ namespace MonkSWF {
 		
 		_define_shape_tag = define_shape_tag;
 		const TagHeader& shape_header = define_shape_tag->header();
-		bool support_32bit_color = (shape_header.code() != DEFINESHAPE && shape_header.code() != DEFINESHAPE2);	// all shape definitions except DEFINESHAPE & DEFINESHAPE2 support 32 bit color
-																												// get the fill styles
+		bool support_32bit_color = (shape_header.code() != TAG_DEFINE_SHAPE && shape_header.code() != TAG_DEFINE_SHAPE2);
+        // all shape definitions except DEFINESHAPE & DEFINESHAPE2 support 32 bit color
+        // get the fill styles
 		uint16_t num_fill_styles = reader->get<uint8_t>();
 		if( num_fill_styles == 0xff )
 			num_fill_styles = reader->get<uint16_t>();
@@ -1159,16 +1160,16 @@ namespace MonkSWF {
 	
 	void DefineShapeTag::print() {
 		_header.print();
-		MK_TRACE("\tDEFINESHAPE: id=%d\n", _shape_id);
+		MK_TRACE("\tDEFINESHAPE: id=%d, w=%f, h=%f\n", _shape_id, _bounds.xmax-_bounds.xmin, _bounds.ymax-_bounds.ymin);
 		//		cout << "shape id: "		<< _shape_id << endl;
 		//		cout << "frame width: "		<< ((_bounds.xmax - _bounds.xmin)/20.0f) << endl;
 		//		cout << "frame height: "	<< ((_bounds.ymax - _bounds.ymin)/20.0f) << endl;
 		
 	}
 	
-	void DefineShapeTag::draw(SWF* swf) {
+	void DefineShapeTag::draw(SWF* swf, const CXFORM& cxform) {
 		//_shape_with_style.draw();
-        swf->GetRenderer()->drawQuad(_bounds);
+        swf->GetRenderer()->drawQuad(_bounds,cxform);
 	}
 	
 	ITag* DefineShapeTag::create( TagHeader* header ) {

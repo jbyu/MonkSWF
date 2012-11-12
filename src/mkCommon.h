@@ -18,11 +18,12 @@
 
 #ifdef _DEBUG
 #define MK_ASSERT	assert
-#define MK_TRACE	printf
+//#define MK_TRACE	printf
 #else
 #define MK_ASSERT	(void)
-#define MK_TRACE	(void)
+//#define MK_TRACE	(void)
 #endif
 
+#define MK_TRACE	printf
 
 #endif // __mkCommon_h__

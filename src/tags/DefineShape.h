@@ -58,7 +58,7 @@ namespace MonkSWF {
 #define REFLECT_SPREAD_MODE     0x1
 #define REPEAT_SPREAD_MODE     0x2
 
-
+//=========================================================================
 	class Gradient {
 	public:
 		bool read( Reader* reader, bool support_32bit_color );
@@ -80,6 +80,7 @@ namespace MonkSWF {
 		GradientRecordArray		_gradient_records;
 	};
 
+//=========================================================================
 #define SOLID_FILL				0x00
 #define LINEAR_GRADIENT_FILL	0x10
 #define RADIAL_GRADIENT_FILL	0x12
@@ -128,6 +129,7 @@ namespace MonkSWF {
 		
 	};
 	
+//=========================================================================
 	class LineStyle {
 	public:
 		
@@ -170,6 +172,8 @@ namespace MonkSWF {
 	typedef std::vector<LineStyle> LineStyleArray;
 	
 	class DefineShapeTag;
+
+//=========================================================================
 	class ShapeWithStyle {
 	public:
 		bool read( Reader* reader, DefineShapeTag* define_shape_tag );
@@ -201,6 +205,7 @@ namespace MonkSWF {
 		DefineShapeTag*		_define_shape_tag;
 	};
 	
+//=========================================================================
 	class DefineShapeTag : public IDefineShapeTag {
 	public:
 	
@@ -215,7 +220,7 @@ namespace MonkSWF {
 		virtual bool read( Reader* reader, SWF* );
 		virtual void print();
 		
-		virtual void draw( SWF* swf );
+		virtual void draw( SWF* swf, const CXFORM& );
 		
 		// regular DefineShape tag == 2
 		static ITag* create( TagHeader* header );

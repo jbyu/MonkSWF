@@ -20,6 +20,23 @@ using namespace std;
 #define vgGetMatrix (void)
 
 namespace MonkSWF {
+
+    const MATRIX kMatrixIdentity =
+    {
+        1,0,0,
+        0,1,0
+    };
+    const CXFORM kCXFormIdentity = 
+    {
+        {1,1,1,1},
+        {0,0,0,0}
+    };
+    const MATRIX3f kMatrix3fIdentity =
+    {{
+        1,0,0,
+        0,1,0,    
+        0,0,1
+    }};
     
 	bool PlaceObject2Tag::read( Reader* reader, SWF* _swf )
 	{
@@ -42,38 +59,31 @@ namespace MonkSWF {
 		if ( _has_character )
 		{
 			_character_id = reader->get<uint16_t>();
+            // create movie clip for the sprite
 			IDefineSpriteTag* sprite = _swf->getSprite( _character_id );
 			if ( sprite )
-			{
 				_pMovieClip = _swf->createMovieClip( *sprite );
-			}
 		}
 			
-		if ( _has_matrix )
-		{
-			reader->getMatrix( _transfrom );
-		}
+		if ( _has_matrix ) {
+			reader->getMatrix( _transform );
+		} else {
+            _transform = kMatrixIdentity;
+        }
 		
+        _cxform = kCXFormIdentity;
 		if ( has_color_transform ) {
-		
+            reader->align();
 			const uint8_t has_add_terms = reader->getbits( 1 );
 			const uint8_t has_mult_terms = reader->getbits( 1 );
 			const uint8_t nbits = reader->getbits( 4 );
 			if( has_mult_terms ) {
-				coord_t red = reader->getsignedbits( nbits );
-				coord_t green = reader->getsignedbits( nbits );
-				coord_t blue = reader->getsignedbits( nbits );
-				coord_t alpha = reader->getsignedbits( nbits );
-
+                reader->getColor(_cxform.mult, nbits);
 			}
-			
 			if( has_add_terms ) {
-				coord_t red = reader->getsignedbits( nbits );
-				coord_t green = reader->getsignedbits( nbits );
-				coord_t blue = reader->getsignedbits( nbits );
-				coord_t alpha = reader->getsignedbits( nbits );
+                reader->getColor(_cxform.add, nbits);
 			}
-		}
+        }
 		
 		if ( has_ratio ) {
 			// dummy read
@@ -104,31 +114,21 @@ namespace MonkSWF {
 		PlaceObject2Tag* other = (PlaceObject2Tag*)o;
         _character_id = other->_character_id;
 		_pMovieClip = other->_pMovieClip;
+        _texture = other->_texture;
 	}
 
 	void PlaceObject2Tag::copyTransform( IPlaceObjectTag* o ) {
 		//copyNoTransform( o );
 		PlaceObject2Tag* other = (PlaceObject2Tag*)o;
-        _transfrom = other->_transfrom;
-        /*
-		for ( int i = 0; i < 3; i++ ) {
-			for ( int p = 0; p < 3; p++ ) {
-				_transform[i][p] = other->_transform[i][p];
-			}
-		}
-        */
+        _transform = other->_transform;
 	}
 	
 	static inline float degrees (float radians) {return radians * (180.0f/3.14159f);}	
 
-    static PVRTMATRIX3f goMatrix =
-    {{
-        1,0,0,
-        0,1,0,    
-        0,0,1
-    }};
+    static MATRIX3f goRootMatrix = kMatrix3fIdentity;
+    static CXFORM goRootCXForm = kCXFormIdentity;
 
-    void PVRTMatrixSet(PVRTMATRIX3f &mOut, const MATRIX& mIn)
+    inline void MATRIX3fSet(MATRIX3f &mOut, const MATRIX& mIn)
     {
         mOut.f[0] = mIn.sx;
         mOut.f[4] = mIn.sy;
@@ -141,12 +141,12 @@ namespace MonkSWF {
         mOut.f[8] = 1;
     }
 
-    void PVRTMatrixMultiply(
-	    PVRTMATRIX3f		&mOut,
-	    const PVRTMATRIX3f	&mA,
-	    const PVRTMATRIX3f	&mB)
+    inline void MATRIX3fMultiply(
+	    MATRIX3f		&mOut,
+	    const MATRIX3f	&mA,
+	    const MATRIX3f	&mB)
     {
-	    PVRTMATRIX3f mRet;
+	    MATRIX3f mRet;
 	    mRet.f[0] = mA.f[0]*mB.f[0] + mA.f[1]*mB.f[3] + mA.f[2]*mB.f[6];
 	    mRet.f[1] = mA.f[0]*mB.f[1] + mA.f[1]*mB.f[4] + mA.f[2]*mB.f[7];
 	    mRet.f[2] = mA.f[0]*mB.f[2] + mA.f[1]*mB.f[5] + mA.f[2]*mB.f[8];
@@ -160,36 +160,90 @@ namespace MonkSWF {
 	    mRet.f[8] = mA.f[6]*mB.f[2] + mA.f[7]*mB.f[5] + mA.f[8]*mB.f[8];
 	    mOut = mRet;
     }
-    
+
+    inline void COLOR4fSet(
+	    COLOR4f		&mOut,
+	    const COLOR4f	&mIn)
+    {
+        mOut.r = mIn.r;
+        mOut.g = mIn.g;
+        mOut.b = mIn.b;
+        mOut.a = mIn.a;
+    }
+    inline void COLOR4fMultiply(
+	    COLOR4f		&mOut,
+	    const COLOR4f	&mA,
+	    const COLOR4f	&mB)
+    {
+        mOut.r = mA.r * mB.r;
+        mOut.g = mA.g * mB.g;
+        mOut.b = mA.b * mB.b;
+        mOut.a = mA.a * mB.a;
+    }
+    inline void COLOR4fAdd(
+	    COLOR4f		&mOut,
+	    const COLOR4f	&mA,
+	    const COLOR4f	&mB)
+    {
+        mOut.r = mA.r + mB.r;
+        mOut.g = mA.g + mB.g;
+        mOut.b = mA.b + mB.b;
+        mOut.a = mA.a + mB.a;
+    }
+
+    inline void CXFORMMultiply(
+	    CXFORM		&mOut,
+	    const CXFORM	&child,
+	    const CXFORM	&parent)
+    {
+        COLOR4f add;
+        COLOR4fMultiply(add, parent.mult, child.add);
+        COLOR4fAdd(mOut.add, parent.add, add);
+        COLOR4fMultiply(mOut.mult, child.mult, parent.mult);
+    }
+
 	void PlaceObject2Tag::draw( SWF* swf ) {
-        PVRTMATRIX3f origMtx = goMatrix, mtx;
-        PVRTMatrixSet(mtx, _transfrom);
-        PVRTMatrixMultiply(goMatrix, mtx, goMatrix);
-        /*
-        vgGetMatrix(oldMatrix);
-		vgMultMatrix( (VGfloat*)&_transform[0][0] );
-		vgScale( _offsetScale, _offsetScale );
-		vgTranslate( _offsetTranslate[0], _offsetTranslate[1] );
-		*/
-        swf->GetRenderer()->applyTransform(goMatrix);
-        swf->GetRenderer()->applyTexture(_texture);
+        //concatenate matrix
+        MATRIX3f origMTX = goRootMatrix, mtx;
+        MATRIX3fSet(mtx, _transform);
+        MATRIX3fMultiply(goRootMatrix, mtx, goRootMatrix);
+
+        CXFORM origCXF = goRootCXForm;
+        CXFORMMultiply(goRootCXForm, _cxform, goRootCXForm);
+
 		IDefineShapeTag* shape = swf->getShape( _character_id );
-		if( shape )
-        {
-			shape->draw( swf );
-        }
+        swf->GetRenderer()->applyTransform(goRootMatrix);
+        swf->GetRenderer()->applyTexture(_texture);
+
+        // C' = C * Mult + Add
+        // in opengl, use blend mode and multi-pass to achieve that
+        // 1st pass TexEnv(GL_BLEND) with glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        //      Cp * (1-Ct) + Cc *Ct 
+        // 2nd pass TexEnv(GL_MODULATE) with glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+        //      dest + Cp * Ct
+        // let Mult as Cc and Add as Cp, then we get the result
+        //swf->GetRenderer()->applyPassMult(goRootCXForm);
+		if (shape)
+            shape->draw( swf, goRootCXForm );
 		else if ( _pMovieClip )
-		{
 			_pMovieClip->draw( swf );
-		}
+#if 0
+        swf->GetRenderer()->applyPassAdd(goRootCXForm);
+		if (shape)
+            shape->draw( swf );
+		else if ( _pMovieClip )
+			_pMovieClip->draw( swf );
+#endif
 		// restore old matrix
-		//vgLoadMatrix( oldMatrix );
-        goMatrix = origMtx;
+        goRootMatrix = origMTX;
+        goRootCXForm = origCXF;
 	}
 	
 	void PlaceObject2Tag::print() {
 		_header.print();
-		MK_TRACE("\tPLACEOBJECT2: id=%d, depth=%d, move=%d\n", _character_id, _depth, hasMove() );
+        MK_TRACE("\tPLACEOBJECT2: id=%d, depth=%d, move=%d, name=%s\n", _character_id, _depth, hasMove(), _name.c_str() );
+        MK_TRACE("\tCXFORM-Mult:%1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.mult.r, _cxform.mult.g, _cxform.mult.b, _cxform.mult.a );
+        MK_TRACE("\tCXFORM-Add: %1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.add.r, _cxform.add.g, _cxform.add.b, _cxform.add.a );
 	}
 
 //=========================================================================
@@ -197,7 +251,8 @@ namespace MonkSWF {
 	MovieClip::MovieClip(const FrameList& frames)
 		:_frame_list(frames)
 		,_frame_count(frames.size())
-		,_frame(0)
+		,_frame(0xffffffff)
+        ,_play(false)
 	{
 	}
 
@@ -206,13 +261,17 @@ namespace MonkSWF {
 		if (_frame_count <= frame)
 		{
 			frame = 0;
+#if 0
 			// clear display list
 			DisplayList::iterator iter = _display_list.begin();
 			while ( _display_list.end() != iter )
 			{
+    			IPlaceObjectTag *place_obj = iter->second;
+       			if (place_obj) place_obj->play(false);
 				iter->second = NULL;
 				++iter;
 			}
+#endif
 		}
         // build up the display list
 		TagList* frame_tags = _frame_list[ frame ];
@@ -239,43 +298,52 @@ namespace MonkSWF {
 		while( it != tags.end() ) {
             ITag* tag = *it;
 			switch ( tag->code() ) {
-				case PLACEOBJECT2: {
+				case TAG_PLACE_OBJECT2: {
 					IPlaceObjectTag* place_obj = (IPlaceObjectTag*)tag;
 					uint16_t depth = place_obj->depth();
+					IPlaceObjectTag* current_obj = display[ depth ];
 
 					if ( place_obj->hasMove() == false && place_obj->hasCharacter() == true ) {
 						// A new character (with ID of CharacterId) is placed on the display list at the specified
 						// depth. Other fields set the attributes of this new character.
-						IPlaceObjectTag* current_obj = display[ depth ];
 						// copy over the previous matrix if the new character doesn't have one
 						if ( current_obj && place_obj->hasMatrix() == false ) {
 							place_obj->copyTransform( current_obj );
 						}
-						place_obj->setFrame(0xffffffff);
+						place_obj->play(true);
 						display[ depth ] = place_obj;
 						
 					} else if ( place_obj->hasMove() == true && place_obj->hasCharacter() == false ) {
 						// The character at the specified depth is modified. Other fields modify the attributes of this
 						// character. Because any given depth can have only one character, no CharacterId is required.
-						IPlaceObjectTag* current_obj = display[ depth ];
 						if ( current_obj ) {
 							//current_obj->copyTransform( place_obj );
 							//place_obj->setCharacterId( current_obj->characterId() );
+						    if ( place_obj->hasMatrix() == false ) {
+							    place_obj->copyTransform( current_obj );
+						    }
 							place_obj->copyCharacter( current_obj );
 							display[ depth ] = place_obj;
 						}
 					} else if ( place_obj->hasMove() == true && place_obj->hasCharacter() == true ) {
 						// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
 						// is placed at that depth. Other fields set the attributes of this new character.
-						place_obj->setFrame(0xffffffff);
+						if ( current_obj && place_obj->hasMatrix() == false ) {
+							place_obj->copyTransform( current_obj );
+						}
+						place_obj->play(true);
 						display[ depth ] = place_obj;
 					}
 				} break;
 
-				case REMOVEOBJECT:
-				case REMOVEOBJECT2:	{
+				case TAG_REMOVE_OBJECT:
+				case TAG_REMOVE_OBJECT2: {
 					IRemoveObjectTag* remove_object = (IRemoveObjectTag*)tag;
-					display[ remove_object->depth() ] = NULL;
+					uint16_t depth = remove_object->depth();
+					IPlaceObjectTag* current_obj = display[ depth ];
+                    if (current_obj)
+                        current_obj->play(false);
+					display[ depth ] = NULL;
 					//_display_list.erase( remove_object->depth() );
 				} break;
 	
@@ -291,7 +359,7 @@ namespace MonkSWF {
 			IPlaceObjectTag *place_obj = iter->second;
 			if (place_obj) 
 			{
-				place_obj->play();
+				place_obj->update();
 			}
 			++iter;
 		}

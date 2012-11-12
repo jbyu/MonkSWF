@@ -13,7 +13,7 @@
 #include "tags/ShowFrame.h"
 #include "tags/RemoveObject.h"
 #include "tags/DefineSprite.h"
-
+#include "tags/SetBackgroundColor.h"
 
 namespace MonkSWF {
 	
@@ -67,18 +67,20 @@ namespace MonkSWF {
         mpRenderer = renderer;
 		
 		// setup the factories
-		addFactory( ENDTAG,			EndTag::create );
+		addFactory( TAG_END,			EndTag::create );
 		
-		addFactory( DEFINESHAPE,	DefineShapeTag::create );		// DefineShape
-		addFactory( DEFINESHAPE2,	DefineShapeTag::create );		// DefineShape2
-		addFactory( DEFINESHAPE3,	DefineShapeTag::create );		// DefineShape3
-		addFactory( DEFINESHAPE4,	DefineShapeTag::create );		// DefineShape4
+		addFactory( TAG_DEFINE_SHAPE,	DefineShapeTag::create );		// DefineShape
+		addFactory( TAG_DEFINE_SHAPE2,	DefineShapeTag::create );		// DefineShape2
+		addFactory( TAG_DEFINE_SHAPE3,	DefineShapeTag::create );		// DefineShape3
+		addFactory( TAG_DEFINE_SHAPE4,	DefineShapeTag::create );		// DefineShape4
 
-		addFactory( DEFINESPRITE,	DefineSpriteTag::create );
-		addFactory( PLACEOBJECT2,	PlaceObject2Tag::create );
-		addFactory( REMOVEOBJECT2,	RemoveObjectTag::create );
-		addFactory( SHOWFRAME,		ShowFrameTag::create );
+		addFactory( TAG_DEFINE_SPRITE,	DefineSpriteTag::create );
+		addFactory( TAG_PLACE_OBJECT2,	PlaceObject2Tag::create );
+		addFactory( TAG_REMOVE_OBJECT2,	RemoveObjectTag::create );
+		addFactory( TAG_SHOW_FRAME,		ShowFrameTag::create );
 		
+		addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
+
 		return true;
 	}
 	
@@ -95,7 +97,8 @@ namespace MonkSWF {
 		TagList* frame_tags = new TagList;
 		while( tag_header->code() != 0 ) { // while not the end tag 
 			ITag* tag = NULL;
-			TagFactoryFunc factory = getTagFactory( tag_header->code() );
+            const uint32_t code = tag_header->code();
+			TagFactoryFunc factory = getTagFactory( code );
 			if ( factory ) {
 				tag = factory( tag_header );
 
@@ -110,25 +113,38 @@ namespace MonkSWF {
 					reader->skip( dif );
 				}
 
-				if( tag_header->code() == DEFINESHAPE || tag_header->code() == DEFINESHAPE2 
-				   || tag_header->code() == DEFINESHAPE3 || tag_header->code() == DEFINESHAPE4 ) {
+                switch(code)
+                {
+                case TAG_SET_BACKGROUND_COLOR:
+                    {
+					SetBackgroundColorTag* bg = (SetBackgroundColorTag*)tag;
+                    _bgColor.r = bg->r / 255.f;
+                    _bgColor.g = bg->g / 255.f;
+                    _bgColor.b = bg->b / 255.f;
+                    _bgColor.a = 1.f;
+                    } break;
+                case TAG_DEFINE_SHAPE:
+                case TAG_DEFINE_SHAPE2:
+                case TAG_DEFINE_SHAPE3:
+                case TAG_DEFINE_SHAPE4:
+                    {
 					IDefineShapeTag* shape = (IDefineShapeTag*)tag;
 					addShape( shape, shape->shapeId() );
-				}
-
-				if ( tag_header->code() == DEFINESPRITE ) {
+				    } break;
+                case TAG_DEFINE_SPRITE:
+                    {
 					IDefineSpriteTag* sprite = (IDefineSpriteTag*)tag;
 					addSprite( sprite, sprite->spriteId() );
-				}
-
-				if ( tag_header->code() == SHOWFRAME ) {	// ShowFrame
+				    } break;
+                }
+                // ShowFrame
+				if ( TAG_SHOW_FRAME == code ) {
 					_frame_list.push_back( frame_tags );
 					frame_tags = new TagList;
 					delete tag;
 				} else {
 					frame_tags->push_back( tag );
 				}
-					
 			} else {	// no registered factory so skip this tag
 				MK_TRACE("*** SKIPPING UNKOWN TAG *** ");
 				tag_header->print();
@@ -162,6 +178,17 @@ namespace MonkSWF {
 			mpMovieClip->setFrame( mpMovieClip->getFrame() + 1 );
 		}
     }
+
+	void SWF::step( void )
+	{
+		mpMovieClip->setFrame( mpMovieClip->getFrame() + 1 );
+    }
+
+	int SWF::getFrame( void ) const
+	{
+        return mpMovieClip->getFrame();
+    }
+
 
 	void SWF::draw(void) {
 #ifdef USE_OPENVG

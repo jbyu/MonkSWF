@@ -85,16 +85,16 @@ namespace MonkSWF {
 			int32_t nbits;
 			if ( getbits( 1 ) )	{	// has scale
 				nbits = getbits( 5 );
-				m.sx = (float)getsignedbits( nbits )/65536.0f;
-				m.sy = (float)getsignedbits( nbits )/65536.0f;
+				m.sx = (float)getsignedbits( nbits )*SWF_INV_MATRIX;
+				m.sy = (float)getsignedbits( nbits )*SWF_INV_MATRIX;
 			} else {
 				m.sx = m.sy = 1.0f;
 			}
 
 			if ( getbits( 1 ) ) { // has rotation
 				nbits = getbits( 5 );
-				m.r0 = (float)getsignedbits( nbits )/65536.0f;
-				m.r1 = (float)getsignedbits( nbits )/65536.0f;
+				m.r0 = (float)getsignedbits( nbits )*SWF_INV_MATRIX;
+				m.r1 = (float)getsignedbits( nbits )*SWF_INV_MATRIX;
 			} else {
 				m.r0 = m.r1 = 0.0f;	
 			}
@@ -103,6 +103,13 @@ namespace MonkSWF {
 			m.tx = getsignedbits( nbits ) * SWF_INV_TWIPS;
 			m.ty = getsignedbits( nbits ) * SWF_INV_TWIPS;
 		}
+
+        inline void getColor( COLOR4f& color, uint8_t nbits ) {
+			color.r = getsignedbits( nbits ) * SWF_INV_CXFORM;
+			color.g = getsignedbits( nbits ) * SWF_INV_CXFORM;
+			color.b = getsignedbits( nbits ) * SWF_INV_CXFORM;
+			color.a = getsignedbits( nbits ) * SWF_INV_CXFORM;
+        }
 		
 		inline int32_t getCurrentPos() const {
 			return _cur;

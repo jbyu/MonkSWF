@@ -16,7 +16,74 @@
 //#include <iostream>
 
 namespace MonkSWF {
-	
+
+    typedef enum SWF_TagNames {
+        TAG_END             = 0,
+	    TAG_SHOW_FRAME      = 1,
+	    TAG_DEFINE_SHAPE    = 2,
+	    TAG_PLACE_OBJECT    = 4,
+	    TAG_REMOVE_OBJECT   = 5,
+	    TAG_DEFINE_BITS,
+	    TAG_DEFINE_BUTTON,
+	    TAG_JPEG_TABLES,
+	    TAG_SET_BACKGROUND_COLOR = 9,
+	    TAG_DEFINE_FONT,
+	    TAG_DEFINE_TEXT,
+	    TAG_DO_ACTION,
+	    TAG_DEFINE_FONT_INFO,
+	    TAG_DEFINE_SOUND,
+	    TAG_START_SOUND,
+	    TAG_DEFINE_BUTTON_SOUND = 17,
+	    TAG_SOUND_STREAM_HEAD,
+	    TAG_SOUND_STREAM_BLOCK,
+	    TAG_DEFINE_BITS_LOSSLESS,
+	    TAG_DEFINE_BITS_JPEG2,
+	    TAG_DEFINE_SHAPE2       = 22,
+	    TAG_DEFINE_BUTTON_CXFORM,
+	    TAG_PROTECT,
+	    TAG_PLACE_OBJECT2       = 26,
+	    TAG_REMOVE_OBJECT2      = 28,
+	    TAG_DEFINE_SHAPE3       = 32,
+	    TAG_DEFINE_TEXT2,
+	    TAG_DEFINE_BUTTON2,
+	    TAG_DEFINE_BITS_JPEG3,
+	    TAG_DEFINE_BITS_LOSSLESS2,
+	    TAG_DEFINE_EDIT_TEXT,
+	    TAG_DEFINE_SPRITE       = 39,
+	    TAG_FRAME_LABEL         = 43,
+	    TAG_SOUND_STREAM_HEAD2  = 45,
+	    TAG_DEFINE_MORPH_SHAPE,
+	    TAG_DEFINE_FONT2        = 48,
+	    TAG_EXPORT_ASSETS       = 56,
+	    TAG_IMPORT_ASSETS,
+	    TAG_ENABLE_DEBUGGER,
+	    TAG_DO_INIT_ACTION,
+	    TAG_DEFINE_VIDEO_STREAM,
+	    TAG_VIDEO_FRAME,
+	    TAG_DEFINE_FONT_INFO2,
+	    TAG_ENABLE_DEBUGGER2    = 64,
+	    TAG_SCRIPT_LIMITS,
+	    TAG_SET_TAB_INDEX,
+	    TAG_FILE_ATTRIBUTES     = 69,
+	    TAG_PLACE_OBJECT3,
+	    TAG_IMPORT_ASSETS2,
+	    TAG_DEFINE_FONT_ALIGN_ZONES = 73,
+	    TAG_DEFINE_CSM_TEXT_SETTINGS,
+	    TAG_DEFINE_FONT3,
+	    TAG_SYMBOL_CLASS,
+	    TAG_METADATA,
+	    TAG_DEFINE_SCALING_GRID,
+	    TAG_DO_ABC                              = 82,
+	    TAG_DEFINE_SHAPE4                       = 83,
+	    TAG_DEFINE_MORPH_SHAPE2,
+	    TAG_DEFINE_SCENE_AND_FRAME_LABEL_DATA   = 86,
+	    TAG_DEFINE_BINARY_DATA,
+	    TAG_DEFINE_FONT_NAME        = 88,
+	    TAG_DEFINE_START_SOUND2     = 89,
+	    TAG_DEFINE_BITS_JPEG4       = 90,
+	    TAG_DEFINE_FONT4            = 91,
+    } SWF_TAG_NAMES;
+
 	class SWF;
 	class ITag;
 	class IPlaceObjectTag;
@@ -25,6 +92,7 @@ namespace MonkSWF {
 	typedef std::vector<ITag*>						TagList;
 	typedef std::vector<TagList*>					FrameList;
 	
+//=========================================================================
 	class TagHeader {
 	public:
 		inline uint32_t code() const {
@@ -43,7 +111,7 @@ namespace MonkSWF {
 		uint32_t _length;
 	};
 
-
+//=========================================================================
 	class ITag {
 	public:
 		virtual bool read( Reader* reader, SWF* _swf ) = 0;
@@ -71,9 +139,8 @@ namespace MonkSWF {
 		
 		TagHeader	_header;
 	};
-	
+
 //=========================================================================
-#define ENDTAG 0
 	class EndTag : public ITag {
 	public:
 		EndTag( TagHeader& header )
@@ -93,13 +160,9 @@ namespace MonkSWF {
 	};
 	
 //=========================================================================
-#define DEFINESHAPE 2
-#define DEFINESHAPE2 22
-#define DEFINESHAPE3 32
-#define DEFINESHAPE4 83	
 	class IDefineShapeTag : public ITag {
 	public:
-		virtual void draw( SWF* swf ) = 0;
+		virtual void draw( SWF* swf, const CXFORM& ) = 0;
 		
 		uint16_t shapeId() const {
 			return _shape_id;
@@ -117,7 +180,6 @@ namespace MonkSWF {
 	};
 	
 //=========================================================================
-#define DEFINESPRITE 39
 	class IDefineSpriteTag : public ITag {
 	public:
 		uint16_t spriteId() const {
@@ -142,7 +204,6 @@ namespace MonkSWF {
 	};
 
 //=========================================================================
-#define PLACEOBJECT2	26 
 	class IPlaceObjectTag : public ITag 
 	{
 	public:
@@ -150,7 +211,8 @@ namespace MonkSWF {
 		{
 		}
 
-		virtual void play(void) = 0;
+		virtual void update(void) = 0;
+        virtual void play(bool enable) = 0;
 		virtual void setFrame(uint32_t frame) = 0;
 
 		virtual void draw( SWF* swf ) = 0;
@@ -171,18 +233,14 @@ namespace MonkSWF {
 		bool hasCharacter() const { return 0!=_has_character; }
 		bool hasMatrix() const { return 0!=_has_matrix; }
 		bool hasMove() const { return 0!=_has_move; }
-	
-		int getFrame(void) const { return _frame; }
 
-
-		static bool compare( IPlaceObjectTag* a, IPlaceObjectTag* b ) {
+        static bool compare( IPlaceObjectTag* a, IPlaceObjectTag* b ) {
 			return a->depth() < b->depth();
 		}
 
 	protected:
 		IPlaceObjectTag( TagHeader& header ) 
 		:ITag( header )
-		,_frame(0)
 		,_depth( 0 )
 		,_character_id( 0xffff )
 		,_has_matrix( 0 )
@@ -190,7 +248,6 @@ namespace MonkSWF {
 		,_has_move( 0 )
 		{}
 		
-		int			_frame;
 		uint16_t	_depth;
 		uint16_t	_character_id;
 		uint8_t		_has_matrix;
@@ -199,7 +256,6 @@ namespace MonkSWF {
 	};
 	
 //=========================================================================
-#define SHOWFRAME 1	
 	class IShowFrameTag : public ITag {
 	protected:
 		IShowFrameTag( TagHeader& header ) 
@@ -211,8 +267,6 @@ namespace MonkSWF {
 	};
 
 //=========================================================================
-#define REMOVEOBJECT	5
-#define REMOVEOBJECT2	28
 	class IRemoveObjectTag : public ITag {
 	public:	
 		uint16_t characterId() const {

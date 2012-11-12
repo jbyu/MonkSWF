@@ -23,16 +23,25 @@ namespace MonkSWF {
 
 		uint32_t getFrame( void ) { return _frame; }
 		void setFrame( uint32_t frame );
+        //void reset( void ) { _frame = 0xffffffff; }
 		void draw( SWF* swf );
-		void play( void )
+        void play( bool enable )
+        {
+            if (enable ^ _play)
+                _frame = 0xffffffff; 
+            _play = enable;
+        }
+		void step( void )
 		{
-			setFrame(_frame + 1);
+            if (_play)
+                setFrame(_frame + 1);
 		}
 
 	private:
 		const FrameList &_frame_list;
 		const uint32_t	_frame_count;
 		uint32_t		_frame;
+        bool            _play;
 		DisplayList		_display_list;
 	};
 
@@ -61,10 +70,16 @@ namespace MonkSWF {
 
 		virtual void copyTransform( IPlaceObjectTag* other );
 
-		void play(void)
+		void update(void)
 		{
 			if (_pMovieClip)
-				_pMovieClip->play();
+				_pMovieClip->step();
+		}
+
+        void play(bool enable) 
+        {
+			if (_pMovieClip)
+				_pMovieClip->play(enable);
 		}
 
 		void setFrame(uint32_t frame)
@@ -82,7 +97,8 @@ namespace MonkSWF {
 		int				_frame;
         unsigned int    _texture;
 		std::string		_name;
-        MATRIX          _transfrom;
+        MATRIX          _transform;
+        CXFORM          _cxform;
 	};
 }
 #endif // __PlaceObject_h__

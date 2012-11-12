@@ -24,15 +24,22 @@ float sfSWF_HEIGHT = 0;
 
 class glRenderer : public MonkSWF::Renderer
 {
-    typedef std::map<std::string, uint32_t> TextureCache;
+    typedef std::map<std::string, GLuint> TextureCache;
     TextureCache moCache;
 
 public:
     ~glRenderer()
     {
+        TextureCache::iterator it = moCache.begin();
+        while(moCache.end() != it)
+        {
+            GLuint id = it->second;
+            glDeleteTextures(1, &id);
+            ++it;
+        }
     }
 
-    void applyTransform( const MonkSWF::PVRTMATRIX3f& mtx )
+    void applyTransform( const MonkSWF::MATRIX3f& mtx )
     {
         // convert mtx33 to mtx44, also negate the y axis
         GLfloat m[16];
@@ -59,32 +66,83 @@ public:
     {
         if (0 != texture)
         {
-            glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, texture);
-        } else {
-            glDisable(GL_TEXTURE_2D);
         }
     }
-
-    void drawQuad( const MonkSWF::RECT& rect )
+#if 1
+    void applyPassMult( const MonkSWF::CXFORM& cxform  )
     {
-    glBegin(GL_QUADS);
-        glColor4f(1,0,0,1);
-		glTexCoord2f(0,0);
-        glVertex2f(rect.xmin, rect.ymin);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
+        glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, &cxform.mult.r);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, cxform.mult.a);
+    }
+    void applyPassAdd( const MonkSWF::CXFORM& cxform  )
+    {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, 1);
+    }
+#else
+    void applyPassMult( const MonkSWF::CXFORM& cxform )
+    {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        float r = cxform.mult.r + cxform.add.r;
+        float g = cxform.mult.g + cxform.add.g;
+        float b = cxform.mult.b + cxform.add.b;
+        glColor4f(r, g, b, cxform.mult.a);
+    }
+    void applyPassAdd( const MonkSWF::CXFORM& cxform )
+    {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, 1);
+    }
+#endif
+    void drawQuad( const MonkSWF::RECT& rect, const MonkSWF::CXFORM& cxform  )
+    {
+        // C' = C * Mult + Add
+        // in opengl, use blend mode and multi-pass to achieve that
+        // 1st pass TexEnv(GL_BLEND) with glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        //      Cp * (1-Ct) + Cc *Ct 
+        // 2nd pass TexEnv(GL_MODULATE) with glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+        //      dest + Cp * Ct
+        // let Mult as Cc and Add as Cp, then we get the result
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
+        glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, &cxform.mult.r);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, cxform.mult.a);
+        glBegin(GL_QUADS);
+		    glTexCoord2f(0,0);
+            glVertex2f(rect.xmin, rect.ymin);
 
-        glColor4f(0,1,0,1);
-		glTexCoord2f(1,0);
-        glVertex2f(rect.xmax, rect.ymin);
+		    glTexCoord2f(1,0);
+            glVertex2f(rect.xmax, rect.ymin);
 
-        glColor4f(0,0,1,1);
-    	glTexCoord2f(1,1);
-        glVertex2f(rect.xmax, rect.ymax);
+    	    glTexCoord2f(1,1);
+            glVertex2f(rect.xmax, rect.ymax);
 
-        glColor4f(1,1,1,1);
-		glTexCoord2f(0,1);
-        glVertex2f(rect.xmin, rect.ymax);
-	glEnd();
+		    glTexCoord2f(0,1);
+            glVertex2f(rect.xmin, rect.ymax);
+	    glEnd();
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, 1);
+        glBegin(GL_QUADS);
+		    glTexCoord2f(0,0);
+            glVertex2f(rect.xmin, rect.ymin);
+
+		    glTexCoord2f(1,0);
+            glVertex2f(rect.xmax, rect.ymin);
+
+    	    glTexCoord2f(1,1);
+            glVertex2f(rect.xmax, rect.ymax);
+
+		    glTexCoord2f(0,1);
+            glVertex2f(rect.xmin, rect.ymax);
+	    glEnd();
     }
 
     unsigned int getTexture( const char *filename )
@@ -162,6 +220,8 @@ void reshape (int w, int h)
 	gluOrtho2D(0, w, h, 0);
 }
 
+static bool gbUpdate = true;
+
 //Called whenever a key on the keyboard was pressed.
 //The key is given by the ''key'' parameter, which is in ASCII.
 //It's often a good idea to have the escape key (ASCII value 27) call glutLeaveMainLoop() to 
@@ -170,6 +230,15 @@ void keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+    case 'z':
+        if (gpSWF) {
+            gpSWF->step();
+            printf("frame[%d]\n",gpSWF->getFrame());
+        }
+        break;
+    case 32:
+        gbUpdate ^= 1;
+        break;
 	case 27:
 		glutLeaveMainLoop();
 		break;
@@ -184,7 +253,13 @@ void Timer(int)
 	clock_t tick = clock();
 	float delta = float(tick - siLastTick) *0.001f;
 	siLastTick = tick;
-    if (gpSWF) gpSWF->play(delta);
+
+    if(gbUpdate)
+    {
+        if (gpSWF)
+            gpSWF->play(delta);
+    }
+
 	glutPostRedisplay();
 	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 }
@@ -199,12 +274,12 @@ int _tmain(int argc, char* argv[])
     glutInit(&argc, argv);
 
 	int width =  960;
-	int height = 640;
+	int height = 960;
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowSize (width, height); 
-	glutInitWindowPosition (300, 200);
+	glutInitWindowPosition (256, 32);
 	glutCreateWindow (argv[0]);
-	glutSetWindowTitle("test");
+	glutSetWindowTitle("swfView ver0.1");
 
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
@@ -212,10 +287,13 @@ int _tmain(int argc, char* argv[])
 	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   // glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, colorFactor);
     glDepthMask(false);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    GLfloat colorFactor[4]={0};
+    glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, colorFactor);
 
 #if 1
     char *filename = argv[1];
@@ -232,6 +310,9 @@ int _tmain(int argc, char* argv[])
     gpSWF->read(&reader);
     sfSWF_HEIGHT = gpSWF->getFrameHeight();
     delete [] pBuffer;
+
+    const MonkSWF::COLOR4f& color = gpSWF->getBackgroundColor();
+   	glClearColor(color.r, color.g, color.b, color.a);
 #endif
 
 	siLastTick = clock();

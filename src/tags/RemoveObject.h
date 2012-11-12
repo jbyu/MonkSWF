@@ -12,8 +12,6 @@
 
 #include "mkTag.h"
 
-using namespace std;
-
 namespace MonkSWF {
 	class RemoveObjectTag : public IRemoveObjectTag {
 	public:
@@ -25,7 +23,7 @@ namespace MonkSWF {
         {}
 		
 		virtual bool read( Reader* reader, SWF* ) {
-			if( code() == REMOVEOBJECT )
+			if( code() == TAG_REMOVE_OBJECT )
 				_character_id = reader->get<uint16_t>();
 				
 			_depth = reader->get<uint16_t>();
@@ -34,7 +32,7 @@ namespace MonkSWF {
 		}
 		
 		virtual void print() {
-			if( code() == REMOVEOBJECT )
+			if( code() == TAG_REMOVE_OBJECT )
 				MK_TRACE("REMOVEOBJECT id=%d, depth=%d\n", _character_id, _depth);
 			else
 				MK_TRACE("REMOVEOBJECT2 depth=%d\n", _depth);

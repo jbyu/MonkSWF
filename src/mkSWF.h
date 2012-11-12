@@ -33,8 +33,10 @@ namespace MonkSWF {
     public:
         virtual ~Renderer() {}
         virtual void applyTexture( unsigned int texture ) = 0;
-        virtual void applyTransform( const PVRTMATRIX3f& mtx ) = 0;
-        virtual void drawQuad( const RECT& rect ) = 0;
+        virtual void applyTransform( const MATRIX3f& mtx ) = 0;
+        //virtual void applyPassMult( const CXFORM& color  ) = 0;
+        //virtual void applyPassAdd( const CXFORM& color  ) = 0;
+        virtual void drawQuad(const RECT& rect, const CXFORM&) = 0;
         virtual unsigned int getTexture( const char *filename ) = 0;
     };
 	
@@ -126,7 +128,7 @@ namespace MonkSWF {
 		}
 		
 		void draw(void);
-
+        void step(void);
 		void play(float delta);
 
 		float getFrameWidth() const {
@@ -141,7 +143,11 @@ namespace MonkSWF {
 		int getFrameCount() const {
 			return _header.getFrameCount();
 		}
-		
+
+		int getFrame(void) const;
+
+        const COLOR4f& getBackgroundColor(void) const { return _bgColor; }
+
 		MovieClip *createMovieClip(const IDefineSpriteTag &tag);
 
 	private:
@@ -159,6 +165,7 @@ namespace MonkSWF {
 		Header				_header;
 		TagFactoryMap		_tag_factories;
 
+        COLOR4f             _bgColor;
 		Reader*				_reader;
         Renderer            *mpRenderer;
 		MovieClip			*mpMovieClip;

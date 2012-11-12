@@ -43,7 +43,7 @@ namespace MonkSWF {
 		tag_header->read( reader );
 		
 		TagList* frame_tags = new TagList;
-		while( tag_header->code() != ENDTAG ) { // while not the end tag 
+		while( tag_header->code() != TAG_END ) { // while not the end tag 
 			ITag* tag = NULL;
 			SWF::TagFactoryFunc tag_factory = _swf->getTagFactory( tag_header->code() );
 			if( tag_factory ) {
@@ -68,7 +68,7 @@ namespace MonkSWF {
 				}
 #endif				
 				
-				if( tag_header->code() == SHOWFRAME ) {	// ShowFrame
+				if( tag_header->code() == TAG_SHOW_FRAME ) {	// ShowFrame
 					_frame_list.push_back( frame_tags );
 					frame_tags = new TagList;
 					delete tag;

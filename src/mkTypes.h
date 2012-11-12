@@ -20,6 +20,8 @@ namespace MonkSWF {
 	
     const int SWF_TWIPS	= 20;
 	const float SWF_INV_TWIPS = 1.f / SWF_TWIPS;
+	const float SWF_INV_CXFORM = 1.f / (1<<8);
+	const float SWF_INV_MATRIX = 1.f / (1<<16);
 
 	// Basic Structures
 	
@@ -36,7 +38,12 @@ namespace MonkSWF {
 		uint8_t    g;
 		uint8_t    b;
 	};
-	
+
+   	struct COLOR4f
+    {
+        float r,g,b,a;
+    };
+    	
 	struct YUV
 	{
 		uint8_t	y,u,v;
@@ -55,7 +62,7 @@ namespace MonkSWF {
 		float        r0, sy, ty;
 	};
 
-    struct PVRTMATRIX3f
+    struct MATRIX3f
     {
         float* operator [] ( const int Row )
     	{
@@ -64,14 +71,12 @@ namespace MonkSWF {
 	    float f[9];	/*!< Array of float */
     };
 
-//	
-//	typedef struct _CXFORM
-//		{ S16           a0, a1; /* mult, add */
-//			S16           r0, r1;
-//			S16           g0, g1;
-//			S16           b0, b1;
-//		} CXFORM;
-//	
+	typedef struct _CXFORM
+    {
+        COLOR4f mult;
+        COLOR4f add;
+	} CXFORM;
+	
 	struct GRADIENT
 	{
 		int num;
