@@ -13,21 +13,45 @@
 #include "mkTag.h"
 
 namespace MonkSWF {
-	class RemoveObjectTag : public IRemoveObjectTag {
+	class RemoveObjectTag : public ITag {
+		uint16_t	_character_id;
+		uint16_t	_depth;
+
 	public:
 		RemoveObjectTag( TagHeader& h ) 
-		: IRemoveObjectTag( h )
+		:ITag( h )
+        ,_character_id( 0 )
 		{}
 		
 		virtual ~RemoveObjectTag()
         {}
 		
+		uint16_t characterId() const {
+			return _character_id;
+		}
+		uint16_t depth() const {
+			return _depth;
+		}
+
+        virtual bool process(SWF* swf ) { return true; }
+
+        virtual void setup(MovieClip &movie)
+        {
+            DisplayList& _display_list = movie.getDisplayList();
+		    const uint16_t depth = this->depth();
+            PlaceObjectTag* current_obj = _display_list[ depth ];
+            if (current_obj)
+                current_obj->gotoFrame(0xffffffff);
+            _display_list[ depth ] = NULL;
+        }
+
 		virtual bool read( Reader* reader, SWF* ) {
-			if( code() == TAG_REMOVE_OBJECT )
+			if ( code() == TAG_REMOVE_OBJECT )
+            {
 				_character_id = reader->get<uint16_t>();
-				
+            }	
 			_depth = reader->get<uint16_t>();
-			
+		
 			return true;
 		}
 		

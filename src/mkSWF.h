@@ -28,8 +28,11 @@ namespace MonkSWF {
 
 	class MovieClip;
 
+//=========================================================================
     class Renderer
     {
+        static Renderer     *spRenderer;
+
     public:
         virtual ~Renderer() {}
         virtual void applyTexture( unsigned int texture ) = 0;
@@ -37,10 +40,35 @@ namespace MonkSWF {
         //virtual void applyPassMult( const CXFORM& color  ) = 0;
         //virtual void applyPassAdd( const CXFORM& color  ) = 0;
         virtual void drawQuad(const RECT& rect, const CXFORM&) = 0;
+
+        virtual void maskBegin(void) = 0;
+        virtual void maskEnd(void) = 0;
+        virtual void maskOffBegin(void) = 0;
+        virtual void maskOffEnd(void) = 0;
+
         virtual unsigned int getTexture( const char *filename ) = 0;
+
+        static Renderer* getRenderer(void) { return spRenderer; }
+        static void setRenderer(Renderer *r) { spRenderer = r; }
     };
-	
-	class SWF {
+//=========================================================================
+   class Speaker
+   {
+        static Speaker *spSpeaker;
+
+    public:
+        virtual ~Speaker() {}
+
+        virtual unsigned int getSound( const char *filename ) = 0;
+        virtual void playSound( unsigned int sound, bool stop, bool noMultiple, bool loop ) = 0;
+
+        static Speaker* getSpeaker(void) { return spSpeaker; }
+        static void setSpeaker(Speaker *r) { spSpeaker = r; }
+   };
+
+//=========================================================================
+	class SWF
+    {
 	public:
 
 #ifdef USE_BOOST
@@ -52,123 +80,86 @@ namespace MonkSWF {
 
 		// factory function prototype
 		typedef ITag* (*TagFactoryFunc)( TagHeader* );
-	
+
+        typedef uint32_t (*LoadAssetCallback)( const char *name );
+
 		SWF(); 
         ~SWF();
 		
-        Renderer *GetRenderer(void) { return mpRenderer; }
-		bool initialize(Renderer*renderer);
+		static bool initialize(LoadAssetCallback);
 		bool read( Reader *reader );
 		void print();
 		
-		void addFactory( uint32_t tag_code, TagFactoryFunc factory ) {
-			_tag_factories[ tag_code ] = factory;
-		}
-		
-		TagFactoryFunc getTagFactory( uint32_t tag_code ) {
+		static void addFactory( uint32_t tag_code, TagFactoryFunc factory ) { _tag_factories[ tag_code ] = factory;	}
+
+		static TagFactoryFunc getTagFactory( uint32_t tag_code ) {
 			TagFactoryMap::iterator factory = _tag_factories.find( tag_code );
 			if (_tag_factories.end() != factory)
 				return factory->second;
 			return NULL;
 		}
 		
-		IDefineShapeTag* getShape( uint16_t i ) {		// todo: change to map instead of vector
-			ShapeDictionary::iterator it = _shape_dictionary.find( i );
-			if (it == _shape_dictionary.end() ) {
+		void  addCharacter( ITag* tag, uint16_t cid ) { _dictionary[cid] = tag; }
+		ITag* getCharacter( uint16_t i ) {
+			CharacterDictionary::iterator it = _dictionary.find( i );
+			if (it == _dictionary.end() ) {
 				return NULL;
 			}
 			return it->second;
 		}
 		
-		int32_t numShapes() const {
-			return _shape_dictionary.size();
-		}
-
-		void addShape( IDefineShapeTag* shape, uint16_t cid ) {
-			_shape_dictionary[cid] = shape;
-		}
-
-#if 0		
-		IDefineShapeTag* shapeAt( int32_t idx ) {
-			return _shape_dictionary[idx];
-		}
-		IDefineSpriteTag* spriteAt( uint32_t idx ) {
-			if ( _sprite_dictionary.size() == 0 || idx >= _sprite_dictionary.size() ) {
-				return 0;
-			}
-			SpriteDictionary::iterator i = _sprite_dictionary.begin();
-			advance(i, idx);
-			return i->second;
-		}
-#endif
-
-		IDefineSpriteTag* getSprite( uint16_t i ) {
-			SpriteDictionary::iterator it = _sprite_dictionary.find( i );
-			if (it == _sprite_dictionary.end() ) {
-				return NULL;
-			}
-			return it->second;
-		}
-
-		int32_t numSprites() const {
-			return _sprite_dictionary.size();
-		}
-		
-		void addSprite( IDefineSpriteTag* sprite, uint16_t cid ) {
-			_sprite_dictionary[cid] = sprite;
-		}
-
-		/*
-		int32_t numFrames() const {
-			return _frame_list.size();
-		}
-		*/
-		Reader* reader() const {
-			return _reader;
-		}
+		Reader* reader() const { return _reader; }
 		
 		void draw(void);
         void step(void);
 		void play(float delta);
 
-		float getFrameWidth() const {
-			return _header.getFrameWidth();
-		}
-		float getFrameHeight() const {
-			return _header.getFrameHeight();
-		}
-		float getFrameRate() const {
-			return _header.getFrameRate();
-		}
-		int getFrameCount() const {
-			return _header.getFrameCount();
-		}
+		float getFrameWidth() const     { return _header.getFrameWidth(); }
+		float getFrameHeight() const    { return _header.getFrameHeight(); }
+		float getFrameRate() const      { return _header.getFrameRate(); }
+		int getFrameCount() const       { return _header.getFrameCount(); }
+		int getCurrentFrame(void) const;
 
-		int getFrame(void) const;
+        COLOR4f& getBackgroundColor(void) { return _bgColor; }
 
-        const COLOR4f& getBackgroundColor(void) const { return _bgColor; }
+		MovieClip *createMovieClip(const ITag &tag);
 
-		MovieClip *createMovieClip(const IDefineSpriteTag &tag);
+        uint32_t getAsset(uint16_t id)
+        {
+            AssetDictionary::iterator it = moAssets.find(id);
+            if (moAssets.end() != it)
+                return it->second;
+            return 0;
+        }
+        
+        bool addAsset(uint16_t id, const char *name)
+        {
+            if (_asset_loader)
+            {
+                moAssets[id] = _asset_loader( name );
+                return true;
+            }
+            return false;
+        }
 
-	private:
-		typedef std::map< uint32_t, SWF::TagFactoryFunc >	TagFactoryMap;
-		typedef std::map< uint16_t, IDefineShapeTag* >		ShapeDictionary;
-		typedef std::map< uint16_t, IDefineSpriteTag* >		SpriteDictionary;
-		typedef std::vector<MovieClip*>						MovieList;
+    private:
+		typedef std::map< uint32_t, TagFactoryFunc >    TagFactoryMap;
+		typedef std::map< uint16_t, ITag* >             CharacterDictionary;
+        typedef std::map< uint16_t, uint32_t >          AssetDictionary;
+		typedef std::vector< MovieClip* >               MovieList;
 
 		float               _elapsedAccumulator;
-		
-		ShapeDictionary		_shape_dictionary;
-		SpriteDictionary	_sprite_dictionary;
+    	CharacterDictionary	_dictionary;
 		FrameList			_frame_list;
 		MovieList			_movie_list;
 		Header				_header;
-		TagFactoryMap		_tag_factories;
 
+        AssetDictionary     moAssets;
         COLOR4f             _bgColor;
 		Reader*				_reader;
-        Renderer            *mpRenderer;
 		MovieClip			*mpMovieClip;
+		static TagFactoryMap        _tag_factories;
+        static LoadAssetCallback    _asset_loader;
 	};
 }
 #endif // __mkSWF_h__

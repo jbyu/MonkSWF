@@ -49,7 +49,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SWF_DEBUG;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\src;D:\project\forSWF\MonkVG\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -85,6 +85,9 @@
     <ClInclude Include="..\..\src\mkSWF.h" />
     <ClInclude Include="..\..\src\mkTag.h" />
     <ClInclude Include="..\..\src\mkTypes.h" />
+    <ClInclude Include="..\..\src\tags\DefineSound.h" />
+    <ClInclude Include="..\..\src\tags\DoAction.h" />
+    <ClInclude Include="..\..\src\tags\ExportAssets.h" />
     <ClInclude Include="..\..\src\tags\SetBackgroundColor.h" />
     <ClInclude Include="..\..\src\tags\DefineShape.h" />
     <ClInclude Include="..\..\src\tags\DefineSprite.h" />
@@ -94,11 +97,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\mkHeader.cpp" />
-    <ClCompile Include="..\..\src\mkReader.cpp" />
     <ClCompile Include="..\..\src\mkSWF.cpp" />
     <ClCompile Include="..\..\src\mkTag.cpp" />
     <ClCompile Include="..\..\src\tags\DefineShape.cpp" />
     <ClCompile Include="..\..\src\tags\DefineSprite.cpp" />
+    <ClCompile Include="..\..\src\tags\DoAction.cpp" />
     <ClCompile Include="..\..\src\tags\PlaceObject.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

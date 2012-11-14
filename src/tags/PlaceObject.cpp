@@ -6,9 +6,12 @@
  *  Copyright 2009 MP Engineering. All rights reserved.
  *
  */
+//#include <Windows.h>
+//#include <GL/gl.h>
 
 #include "PlaceObject.h"
 #include "DefineSprite.h"
+#include "DefineShape.h"
 #include "mkSWF.h"
 
 using namespace std;
@@ -38,7 +41,7 @@ namespace MonkSWF {
         0,0,1
     }};
     
-	bool PlaceObject2Tag::read( Reader* reader, SWF* _swf )
+	bool PlaceObjectTag::read( Reader* reader, SWF* _swf )
 	{
 		if( reader->getBitPos() )
 			MK_TRACE("UNALIGNED!!\n");
@@ -51,18 +54,17 @@ namespace MonkSWF {
 		_has_character = reader->getbits( 1 );
 		_has_move = reader->getbits( 1 );
 		
-		if( has_clip_actions || has_clip_depth )
-			assert( 0 );
-			
 		_depth = reader->get<uint16_t>();
 
 		if ( _has_character )
 		{
 			_character_id = reader->get<uint16_t>();
             // create movie clip for the sprite
-			IDefineSpriteTag* sprite = _swf->getSprite( _character_id );
-			if ( sprite )
-				_pMovieClip = _swf->createMovieClip( *sprite );
+			ITag* tag = _swf->getCharacter( _character_id );
+            if ( tag->code() == TAG_DEFINE_SPRITE )
+				_pMovieClip = _swf->createMovieClip( *tag );
+            else
+                _pShape = (DefineShapeTag*)tag;
 		}
 			
 		if ( _has_matrix ) {
@@ -96,10 +98,10 @@ namespace MonkSWF {
 			//delete [] n;
             reader->align();
             _name = std::string( reader->getString() );
-            _texture = _swf->GetRenderer()->getTexture( _name.c_str() );
+            //_texture = Renderer::getRenderer()->getTexture( _name.c_str() );
 		}
 		if( has_clip_depth ) {
-			reader->get<uint16_t>();
+			_clipDepth = reader->get<uint16_t>();
 		}
 		if( has_clip_actions ) {
 			// TOOD: support clip actions 
@@ -108,23 +110,8 @@ namespace MonkSWF {
 		
 		return true;
 	}
-	
-	void PlaceObject2Tag::copyCharacter( IPlaceObjectTag* o )
-	{
-		PlaceObject2Tag* other = (PlaceObject2Tag*)o;
-        _character_id = other->_character_id;
-		_pMovieClip = other->_pMovieClip;
-        _texture = other->_texture;
-	}
-
-	void PlaceObject2Tag::copyTransform( IPlaceObjectTag* o ) {
-		//copyNoTransform( o );
-		PlaceObject2Tag* other = (PlaceObject2Tag*)o;
-        _transform = other->_transform;
-	}
-	
-	static inline float degrees (float radians) {return radians * (180.0f/3.14159f);}	
-
+		
+	//static inline float degrees (float radians) {return radians * (180.0f/3.14159f);}	
     static MATRIX3f goRootMatrix = kMatrix3fIdentity;
     static CXFORM goRootCXForm = kCXFormIdentity;
 
@@ -202,7 +189,7 @@ namespace MonkSWF {
         COLOR4fMultiply(mOut.mult, child.mult, parent.mult);
     }
 
-	void PlaceObject2Tag::draw( SWF* swf ) {
+	void PlaceObjectTag::draw( SWF* swf ) {
         //concatenate matrix
         MATRIX3f origMTX = goRootMatrix, mtx;
         MATRIX3fSet(mtx, _transform);
@@ -211,9 +198,7 @@ namespace MonkSWF {
         CXFORM origCXF = goRootCXForm;
         CXFORMMultiply(goRootCXForm, _cxform, goRootCXForm);
 
-		IDefineShapeTag* shape = swf->getShape( _character_id );
-        swf->GetRenderer()->applyTransform(goRootMatrix);
-        swf->GetRenderer()->applyTexture(_texture);
+        Renderer::getRenderer()->applyTransform(goRootMatrix);
 
         // C' = C * Mult + Add
         // in opengl, use blend mode and multi-pass to achieve that
@@ -222,12 +207,12 @@ namespace MonkSWF {
         // 2nd pass TexEnv(GL_MODULATE) with glBlendFunc(GL_SRC_ALPHA, GL_ONE)
         //      dest + Cp * Ct
         // let Mult as Cc and Add as Cp, then we get the result
-        //swf->GetRenderer()->applyPassMult(goRootCXForm);
-		if (shape)
-            shape->draw( swf, goRootCXForm );
+		if (_pShape)
+            _pShape->draw( swf, goRootCXForm );
 		else if ( _pMovieClip )
 			_pMovieClip->draw( swf );
 #if 0
+        swf->GetRenderer()->applyPassMult(goRootCXForm);
         swf->GetRenderer()->applyPassAdd(goRootCXForm);
 		if (shape)
             shape->draw( swf );
@@ -239,12 +224,57 @@ namespace MonkSWF {
         goRootCXForm = origCXF;
 	}
 	
-	void PlaceObject2Tag::print() {
+	void PlaceObjectTag::print() {
 		_header.print();
-        MK_TRACE("\tPLACEOBJECT2: id=%d, depth=%d, move=%d, name=%s\n", _character_id, _depth, hasMove(), _name.c_str() );
-        MK_TRACE("\tCXFORM-Mult:%1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.mult.r, _cxform.mult.g, _cxform.mult.b, _cxform.mult.a );
-        MK_TRACE("\tCXFORM-Add: %1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.add.r, _cxform.add.g, _cxform.add.b, _cxform.add.a );
+        MK_TRACE("id=%d, depth=%d, clip=%d, move=%d, name=%s\n", _character_id, _depth, _clipDepth, hasMove(), _name.c_str() );
+        //MK_TRACE("\tCXFORM-Mult:%1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.mult.r, _cxform.mult.g, _cxform.mult.b, _cxform.mult.a );
+        //MK_TRACE("\tCXFORM-Add: %1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.add.r, _cxform.add.g, _cxform.add.b, _cxform.add.a );
 	}
+
+    void PlaceObjectTag::setup(MovieClip& movie) 
+    {
+        DisplayList& _display_list = movie.getDisplayList();
+		const uint16_t depth = this->depth();
+		PlaceObjectTag* current_obj = _display_list[ depth ];
+
+		if ( this->hasMove() == false && this->hasCharacter() == true )
+        {
+			// A new character (with ID of CharacterId) is placed on the display list at the specified
+			// depth. Other fields set the attributes of this new character.
+			// copy over the previous matrix if the new character doesn't have one
+			if (current_obj && this->hasMatrix() == false ) {
+                current_obj->gotoFrame(0xffffffff);
+				this->copyTransform( current_obj );
+			}
+			this->play(true);
+			_display_list[ depth ] = this;
+		}
+        else if ( this->hasMove() == true && this->hasCharacter() == false )
+        {
+			// The character at the specified depth is modified. Other fields modify the attributes of this
+			// character. Because any given depth can have only one character, no CharacterId is required.
+			if ( current_obj ) {
+				//current_obj->copyTransform( place_obj );
+				//place_obj->setCharacterId( current_obj->characterId() );
+				if (this->hasMatrix() == false ) {
+					this->copyTransform( current_obj );
+				}
+				this->copyCharacter( current_obj );
+				_display_list[ depth ] = this;
+			}
+		}
+        else if ( this->hasMove() == true && this->hasCharacter() == true )
+        {
+			// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
+			// is placed at that depth. Other fields set the attributes of this new character.
+			if (current_obj && this->hasMatrix() == false ) {
+                current_obj->gotoFrame(0xffffffff);
+				this->copyTransform( current_obj );
+			}
+			this->play(true);
+			_display_list[ depth ] = this;
+		}
+    }
 
 //=========================================================================
 
@@ -252,116 +282,105 @@ namespace MonkSWF {
 		:_frame_list(frames)
 		,_frame_count(frames.size())
 		,_frame(0xffffffff)
-        ,_play(false)
+        ,_play(true)
 	{
 	}
 
-	void MovieClip::setFrame( uint32_t frame )
+    void MovieClip::clearDisplayList(void)
+    {
+		DisplayList::iterator iter = _display_list.begin();
+		while ( _display_list.end() != iter )
+		{
+    		PlaceObjectTag *place_obj = iter->second;
+       		//if (place_obj) place_obj->play(false);
+			iter->second = NULL;
+			++iter;
+		}
+    }
+
+	void MovieClip::gotoFrame( uint32_t frame )
 	{
 		if (_frame_count <= frame)
 		{
 			frame = 0;
-#if 0
-			// clear display list
-			DisplayList::iterator iter = _display_list.begin();
-			while ( _display_list.end() != iter )
-			{
-    			IPlaceObjectTag *place_obj = iter->second;
-       			if (place_obj) place_obj->play(false);
-				iter->second = NULL;
-				++iter;
-			}
-#endif
+            clearDisplayList();
 		}
         // build up the display list
 		TagList* frame_tags = _frame_list[ frame ];
-		setup_frame(_display_list, *frame_tags );
+		setupFrame( *frame_tags );
 		_frame = frame;
 	}
 
-	void MovieClip::draw( SWF* swf )
-	{
-		// draw the display list
+    void MovieClip::update(void)
+    {
+        if (_play)
+            gotoFrame(_frame + 1);
+    	// update the display list
 		DisplayList::iterator iter = _display_list.begin();
 		while ( _display_list.end() != iter )
 		{
-			IPlaceObjectTag *place_obj = iter->second;
-			if (place_obj) 
-				place_obj->draw( swf ); 
-			++iter;
-		}
-	}
-
-	void setup_frame(DisplayList& display, const TagList& tags)
-	{
-        TagList::const_iterator it = tags.begin();
-		while( it != tags.end() ) {
-            ITag* tag = *it;
-			switch ( tag->code() ) {
-				case TAG_PLACE_OBJECT2: {
-					IPlaceObjectTag* place_obj = (IPlaceObjectTag*)tag;
-					uint16_t depth = place_obj->depth();
-					IPlaceObjectTag* current_obj = display[ depth ];
-
-					if ( place_obj->hasMove() == false && place_obj->hasCharacter() == true ) {
-						// A new character (with ID of CharacterId) is placed on the display list at the specified
-						// depth. Other fields set the attributes of this new character.
-						// copy over the previous matrix if the new character doesn't have one
-						if ( current_obj && place_obj->hasMatrix() == false ) {
-							place_obj->copyTransform( current_obj );
-						}
-						place_obj->play(true);
-						display[ depth ] = place_obj;
-						
-					} else if ( place_obj->hasMove() == true && place_obj->hasCharacter() == false ) {
-						// The character at the specified depth is modified. Other fields modify the attributes of this
-						// character. Because any given depth can have only one character, no CharacterId is required.
-						if ( current_obj ) {
-							//current_obj->copyTransform( place_obj );
-							//place_obj->setCharacterId( current_obj->characterId() );
-						    if ( place_obj->hasMatrix() == false ) {
-							    place_obj->copyTransform( current_obj );
-						    }
-							place_obj->copyCharacter( current_obj );
-							display[ depth ] = place_obj;
-						}
-					} else if ( place_obj->hasMove() == true && place_obj->hasCharacter() == true ) {
-						// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
-						// is placed at that depth. Other fields set the attributes of this new character.
-						if ( current_obj && place_obj->hasMatrix() == false ) {
-							place_obj->copyTransform( current_obj );
-						}
-						place_obj->play(true);
-						display[ depth ] = place_obj;
-					}
-				} break;
-
-				case TAG_REMOVE_OBJECT:
-				case TAG_REMOVE_OBJECT2: {
-					IRemoveObjectTag* remove_object = (IRemoveObjectTag*)tag;
-					uint16_t depth = remove_object->depth();
-					IPlaceObjectTag* current_obj = display[ depth ];
-                    if (current_obj)
-                        current_obj->play(false);
-					display[ depth ] = NULL;
-					//_display_list.erase( remove_object->depth() );
-				} break;
-	
-				default:
-					break;
-			}
-            ++it;
-		}
-		// update the display list
-		DisplayList::iterator iter = display.begin();
-		while ( display.end() != iter )
-		{
-			IPlaceObjectTag *place_obj = iter->second;
+			PlaceObjectTag *place_obj = iter->second;
 			if (place_obj) 
 			{
 				place_obj->update();
 			}
 			++iter;
+		}
+    }
+
+    void MovieClip::draw( SWF* swf )
+	{
+        PlaceObjectTag *mask = NULL;
+		uint16_t highest_masked_layer = 0;
+		// draw the display list
+		DisplayList::iterator iter = _display_list.begin();
+		while ( _display_list.end() != iter )
+		{
+			PlaceObjectTag *place_obj = iter->second;
+			if (place_obj)
+            {
+                const uint16_t clip = place_obj->clipDepth();
+                const uint16_t depth = place_obj->depth();
+			    if (mask && depth > highest_masked_layer)
+                {
+                    // restore stencil
+                    Renderer::getRenderer()->maskOffBegin();
+                    mask->draw( swf ); 
+                    Renderer::getRenderer()->maskOffEnd();
+    			    mask = NULL;
+			    }
+			    if (0 < clip) {
+                    // draw mask
+    				Renderer::getRenderer()->maskBegin();
+                    place_obj->draw( swf ); 
+    				Renderer::getRenderer()->maskEnd();
+	    			highest_masked_layer = clip;
+				    mask = place_obj;
+			    } else {
+                    place_obj->draw( swf ); 
+                }
+            }
+			++iter;
+		}
+		if (mask)
+		{
+			// If a mask masks the scene all the way up to the highest layer, 
+            // it will not be disabled at the end of drawing the display list, so disable it manually.
+            Renderer::getRenderer()->maskOffBegin();
+            mask->draw( swf ); 
+            Renderer::getRenderer()->maskOffEnd();
+    	    mask = NULL;
+		}
+	}
+
+	void MovieClip::setupFrame(const TagList& tags)
+	{
+        TagList::const_iterator it = tags.begin();
+		while( it != tags.end() )
+        {
+            ITag* tag = *it;
+            tag->setup(*this);
+            ++it;
 		}
 	}
 

@@ -93,20 +93,21 @@ namespace MonkSWF {
 	class FillStyle {
 	public:
 		FillStyle()
-		:	_type(-1)
-		,	_paint(VG_INVALID_HANDLE)
+		:_type(0xff)
+        ,_bitmap_id(0)
+		//,	_paint(VG_INVALID_HANDLE)
 		{}
-		
 		
 		bool read( Reader* reader, bool support_32bit_color );
 		
+#ifdef USE_OPENVG
 		inline VGPaint getPaint() {
 			return _paint;
 		}
-		
+#endif
+
 		void print() {
-			//cout << "FillStyle: " << int(_type) << endl;
-			//cout << "\tColor: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
+            MK_TRACE("FILLSTYLE=0x%x, bitmap=%d\n", _type, _bitmap_id);
 		}
 		
 		uint64_t hash() const {
@@ -114,19 +115,21 @@ namespace MonkSWF {
 				| (uint64_t(_color[1] * 255) << 16)
 				| (uint64_t(_color[2] * 255) << 8)
 				| (uint64_t(_color[3] * 255) << 0);
-			
 			return hash;
 		}
+
+        uint16_t getBitmap(void) const { return _bitmap_id; }
 	
 	private:
 		uint8_t		_type;
 		VGfloat		_color[4];
+		uint16_t	_bitmap_id;
+		MATRIX		_bitmap_matrix;
+#ifdef USE_OPENVG
 		MATRIX		_gradient_matrix;
 		Gradient	_gradient;
 		VGPaint		_paint;
-		uint16_t	_bitmap_id;
-		MATRIX		_bitmap_matrix;
-		
+#endif
 	};
 	
 //=========================================================================
@@ -178,8 +181,11 @@ namespace MonkSWF {
 	public:
 		bool read( Reader* reader, DefineShapeTag* define_shape_tag );
 		void draw();
-		
+
+        uint16_t getBitmap(void) const { return _bitmap; }
+
 		void addVGPath( VGPath vgpath, int fill_idx, int line_idx ) {
+#ifdef USE_OPENVG
 			OpenVGPath path;
 			path._vgpath = vgpath;
 			if( fill_idx != -1 )
@@ -188,35 +194,35 @@ namespace MonkSWF {
 				path._line_style = &_line_styles[line_idx];
 			
 			_paths.push_back( path );
-			
+#endif
 		}
 		
 	private:
-		
-		
+        uint16_t        _bitmap;
+#ifdef USE_OPENVG
+		FillStyleArray		_fill_styles;
 		typedef std::list<OpenVGPath> OpenVGPathArray;
 		typedef OpenVGPathArray::iterator OpenVGPathArrayIter;
 		typedef std::map<uint64_t, FillStyle>	FillStyleMap;
-
 		FillStyleMap		_fill_style_map;
-		FillStyleArray		_fill_styles;
 		LineStyleArray		_line_styles;		
 		OpenVGPathArray		_paths;
 		DefineShapeTag*		_define_shape_tag;
+#endif
 	};
 	
 //=========================================================================
-	class DefineShapeTag : public IDefineShapeTag {
+	class DefineShapeTag : public ITag {
 	public:
-	
 		DefineShapeTag( TagHeader& h )
-			:	IDefineShapeTag( h )
+			:ITag( h )
 		{}
 		
-		virtual ~DefineShapeTag() {
-			
+		virtual ~DefineShapeTag()
+        {
 		}
 		
+        virtual bool process(SWF* swf );
 		virtual bool read( Reader* reader, SWF* );
 		virtual void print();
 		
@@ -226,8 +232,9 @@ namespace MonkSWF {
 		static ITag* create( TagHeader* header );
 		
 	private:
+		uint16_t			_shape_id;
 		RECT				_bounds;
-		//ShapeWithStyle		_shape_with_style;
+		ShapeWithStyle		_shape_with_style;
 	};
 	
 	

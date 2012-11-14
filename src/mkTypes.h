@@ -19,9 +19,10 @@ namespace MonkSWF {
 	#define coord_t_MIN -0x80000000
 	
     const int SWF_TWIPS	= 20;
-	const float SWF_INV_TWIPS = 1.f / SWF_TWIPS;
-	const float SWF_INV_CXFORM = 1.f / (1<<8);
-	const float SWF_INV_MATRIX = 1.f / (1<<16);
+	const float SWF_INV_TWIPS   = 1.f / SWF_TWIPS;
+	const float SWF_INV_CXFORM  = 1.f / (1<<8);
+	const float SWF_INV_MATRIX  = 1.f / (1<<16);
+	const float SWF_INV_COLOR   = 1.f / 255.f;
 
 	// Basic Structures
 	

@@ -14,12 +14,19 @@
 #include "tags/RemoveObject.h"
 #include "tags/DefineSprite.h"
 #include "tags/SetBackgroundColor.h"
+#include "tags/ExportAssets.h"
+#include "tags/DefineSound.h"
+#include "tags/DoAction.h"
 
 namespace MonkSWF {
 	
+    Speaker *Speaker::spSpeaker = NULL;
+    Renderer *Renderer::spRenderer = NULL;
+    SWF::LoadAssetCallback SWF::_asset_loader = NULL;
+	SWF::TagFactoryMap SWF::_tag_factories;
+
 	SWF::SWF()
 	:_elapsedAccumulator(0.0f)
-    ,mpRenderer(NULL)
 	,mpMovieClip(NULL)
 	{
 	}
@@ -54,7 +61,7 @@ namespace MonkSWF {
 		mpMovieClip = NULL;
     }
 
-	MovieClip *SWF::createMovieClip(const IDefineSpriteTag &tag)
+	MovieClip *SWF::createMovieClip(const ITag &tag)
 	{
 		const DefineSpriteTag& spriteImpl = (const DefineSpriteTag&) tag;
 		MovieClip *movie = new MovieClip( spriteImpl.getFrameList() );
@@ -62,10 +69,8 @@ namespace MonkSWF {
 		return movie;
 	}
 
-
-	bool SWF::initialize(Renderer *renderer) {
-        mpRenderer = renderer;
-		
+	bool SWF::initialize(LoadAssetCallback func) {
+        _asset_loader = func;
 		// setup the factories
 		addFactory( TAG_END,			EndTag::create );
 		
@@ -75,18 +80,25 @@ namespace MonkSWF {
 		addFactory( TAG_DEFINE_SHAPE4,	DefineShapeTag::create );		// DefineShape4
 
 		addFactory( TAG_DEFINE_SPRITE,	DefineSpriteTag::create );
-		addFactory( TAG_PLACE_OBJECT2,	PlaceObject2Tag::create );
+		addFactory( TAG_PLACE_OBJECT2,	PlaceObjectTag::create );
 		addFactory( TAG_REMOVE_OBJECT2,	RemoveObjectTag::create );
 		addFactory( TAG_SHOW_FRAME,		ShowFrameTag::create );
 		
-		addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
+        addFactory( TAG_EXPORT_ASSETS,  ExportAssetsTag::create );
+        addFactory( TAG_DEFINE_SOUND,   DefineSoundTag::create );
+        addFactory( TAG_START_SOUND,    StartSoundTag::create );
 
+        addFactory( TAG_DO_ACTION,      DoActionTag::create );
+
+		addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
 		return true;
 	}
 	
 	bool SWF::read( Reader* reader ) {
 		_reader = reader;
-		_header.read( reader );
+		bool ret = _header.read( reader );
+        if (false == ret)
+            return false;
 		
 		// get the first tag
         TagHeader oHeader;
@@ -112,41 +124,21 @@ namespace MonkSWF {
 					MK_TRACE("WARNING: tag not read correctly. trying to skip.\n");
 					reader->skip( dif );
 				}
-
-                switch(code)
-                {
-                case TAG_SET_BACKGROUND_COLOR:
-                    {
-					SetBackgroundColorTag* bg = (SetBackgroundColorTag*)tag;
-                    _bgColor.r = bg->r / 255.f;
-                    _bgColor.g = bg->g / 255.f;
-                    _bgColor.b = bg->b / 255.f;
-                    _bgColor.a = 1.f;
-                    } break;
-                case TAG_DEFINE_SHAPE:
-                case TAG_DEFINE_SHAPE2:
-                case TAG_DEFINE_SHAPE3:
-                case TAG_DEFINE_SHAPE4:
-                    {
-					IDefineShapeTag* shape = (IDefineShapeTag*)tag;
-					addShape( shape, shape->shapeId() );
-				    } break;
-                case TAG_DEFINE_SPRITE:
-                    {
-					IDefineSpriteTag* sprite = (IDefineSpriteTag*)tag;
-					addSprite( sprite, sprite->spriteId() );
-				    } break;
+                // process tag
+                bool keepTag = tag->process(this);
+                if (keepTag) {
+                    frame_tags->push_back( tag );
+                } else {
+                    delete tag;
                 }
-                // ShowFrame
-				if ( TAG_SHOW_FRAME == code ) {
+                // create a new frame
+                if ( TAG_SHOW_FRAME == code )
+                {
 					_frame_list.push_back( frame_tags );
 					frame_tags = new TagList;
-					delete tag;
-				} else {
-					frame_tags->push_back( tag );
-				}
-			} else {	// no registered factory so skip this tag
-				MK_TRACE("*** SKIPPING UNKOWN TAG *** ");
+                }
+			} else { // no registered factory so skip this tag
+				MK_TRACE("*** SKIP *** ");
 				tag_header->print();
 				reader->skip( tag_header->length() );
 				//delete tag_header;
@@ -159,7 +151,7 @@ namespace MonkSWF {
 		delete frame_tags;
 		MK_ASSERT(_frame_list.size() == getFrameCount());
 		mpMovieClip = new MovieClip( _frame_list );
-		mpMovieClip->setFrame( 0 );
+		mpMovieClip->gotoFrame( 0 );
 		return true;
 	}
 	
@@ -175,16 +167,16 @@ namespace MonkSWF {
         while (secondPerFrame <= _elapsedAccumulator)
         {
             _elapsedAccumulator -= secondPerFrame;
-			mpMovieClip->setFrame( mpMovieClip->getFrame() + 1 );
+			mpMovieClip->update();
 		}
     }
 
 	void SWF::step( void )
 	{
-		mpMovieClip->setFrame( mpMovieClip->getFrame() + 1 );
+		mpMovieClip->gotoFrame( mpMovieClip->getFrame() + 1 );
     }
 
-	int SWF::getFrame( void ) const
+	int SWF::getCurrentFrame( void ) const
 	{
         return mpMovieClip->getFrame();
     }

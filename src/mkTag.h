@@ -29,10 +29,10 @@ namespace MonkSWF {
 	    TAG_SET_BACKGROUND_COLOR = 9,
 	    TAG_DEFINE_FONT,
 	    TAG_DEFINE_TEXT,
-	    TAG_DO_ACTION,
+	    TAG_DO_ACTION           = 12,
 	    TAG_DEFINE_FONT_INFO,
-	    TAG_DEFINE_SOUND,
-	    TAG_START_SOUND,
+	    TAG_DEFINE_SOUND        = 14,
+	    TAG_START_SOUND         = 15,
 	    TAG_DEFINE_BUTTON_SOUND = 17,
 	    TAG_SOUND_STREAM_HEAD,
 	    TAG_SOUND_STREAM_BLOCK,
@@ -86,11 +86,12 @@ namespace MonkSWF {
 
 	class SWF;
 	class ITag;
-	class IPlaceObjectTag;
+	class PlaceObjectTag;
+    class MovieClip;
 
-	typedef std::map<uint16_t, IPlaceObjectTag*>	DisplayList;
-	typedef std::vector<ITag*>						TagList;
-	typedef std::vector<TagList*>					FrameList;
+	typedef std::map<uint16_t, PlaceObjectTag*>	DisplayList;
+	typedef std::vector<ITag*>					TagList;
+	typedef std::vector<TagList*>				FrameList;
 	
 //=========================================================================
 	class TagHeader {
@@ -105,7 +106,15 @@ namespace MonkSWF {
 		
 		bool read( Reader *reader );
 		void print();
-		
+
+#ifdef SWF_DEBUG
+        const char* name(void) const { return _tagNames[_code]; }
+        static int initialize(void);
+        static std::map<uint32_t, const char*> _tagNames;
+#else
+        const char* name(void) const { return "unknow"; }
+#endif
+
 	private:
 		uint32_t _code;	
 		uint32_t _length;
@@ -116,6 +125,11 @@ namespace MonkSWF {
 	public:
 		virtual bool read( Reader* reader, SWF* _swf ) = 0;
 		virtual void print() = 0;
+
+        // false:   delete this tag
+        // true:    keep this tag
+        virtual bool process(SWF* swf ) { return false; }
+        virtual void setup(MovieClip&) {}
 		
 		const TagHeader& header() {
 			return _header;
@@ -158,7 +172,62 @@ namespace MonkSWF {
 			return (ITag*)(new EndTag( *header ));
 		}				
 	};
-	
+
+#if 0
+//=========================================================================
+	class IPlaceObjectTag : public ITag 
+	{
+	public:
+    	virtual ~IPlaceObjectTag()
+		{
+		}
+
+		virtual void update(void) = 0;
+        virtual void play(bool enable) = 0;
+		virtual void gotoFrame(uint32_t frame) = 0;
+
+		virtual void draw( SWF* swf ) = 0;
+
+		virtual void copyCharacter( IPlaceObjectTag* other ) = 0;
+
+		virtual void copyTransform( IPlaceObjectTag* other ) = 0;
+
+		virtual void copyNoTransform( IPlaceObjectTag* other ) { // copies everything except transform 
+			_depth = other->_depth;
+			_character_id = other->_character_id;
+			_has_character = other->_has_character;
+			_has_move = other->_has_move;
+		}
+		
+		uint16_t depth() const { return _depth; }
+        uint16_t clipDepth() const { return _clipDepth; }
+		uint16_t characterId() const { return _character_id; }
+		bool hasCharacter() const { return 0!=_has_character; }
+		bool hasMatrix() const { return 0!=_has_matrix; }
+		bool hasMove() const { return 0!=_has_move; }
+
+        static bool compare( IPlaceObjectTag* a, IPlaceObjectTag* b ) {
+			return a->depth() < b->depth();
+		}
+
+	protected:
+		IPlaceObjectTag( TagHeader& header ) 
+		:ITag( header )
+		,_depth( 0 )
+        ,_clipDepth(0)
+		,_character_id( 0xffff )
+		,_has_matrix( 0 )
+		,_has_character( 0 )
+		,_has_move( 0 )
+		{}
+		
+		uint16_t	_depth;
+		uint16_t	_clipDepth;
+		uint16_t	_character_id;
+		uint8_t		_has_matrix;
+		uint8_t		_has_character;
+		uint8_t		_has_move;
+	};
 //=========================================================================
 	class IDefineShapeTag : public ITag {
 	public:
@@ -202,59 +271,6 @@ namespace MonkSWF {
 		uint16_t		_sprite_id;
 		uint16_t		_frame_count;
 	};
-
-//=========================================================================
-	class IPlaceObjectTag : public ITag 
-	{
-	public:
-    	virtual ~IPlaceObjectTag()
-		{
-		}
-
-		virtual void update(void) = 0;
-        virtual void play(bool enable) = 0;
-		virtual void setFrame(uint32_t frame) = 0;
-
-		virtual void draw( SWF* swf ) = 0;
-
-		virtual void copyCharacter( IPlaceObjectTag* other ) = 0;
-
-		virtual void copyTransform( IPlaceObjectTag* other ) = 0;
-
-		virtual void copyNoTransform( IPlaceObjectTag* other ) { // copies everything except transform 
-			_depth = other->_depth;
-			_character_id = other->_character_id;
-			_has_character = other->_has_character;
-			_has_move = other->_has_move;
-		}
-		
-		uint16_t depth() const { return _depth; }
-		uint16_t characterId() const { return _character_id; }
-		bool hasCharacter() const { return 0!=_has_character; }
-		bool hasMatrix() const { return 0!=_has_matrix; }
-		bool hasMove() const { return 0!=_has_move; }
-
-        static bool compare( IPlaceObjectTag* a, IPlaceObjectTag* b ) {
-			return a->depth() < b->depth();
-		}
-
-	protected:
-		IPlaceObjectTag( TagHeader& header ) 
-		:ITag( header )
-		,_depth( 0 )
-		,_character_id( 0xffff )
-		,_has_matrix( 0 )
-		,_has_character( 0 )
-		,_has_move( 0 )
-		{}
-		
-		uint16_t	_depth;
-		uint16_t	_character_id;
-		uint8_t		_has_matrix;
-		uint8_t		_has_character;
-		uint8_t		_has_move;
-	};
-	
 //=========================================================================
 	class IShowFrameTag : public ITag {
 	protected:
@@ -288,6 +304,6 @@ namespace MonkSWF {
 		uint16_t	_character_id;
 		uint16_t	_depth;
 	};
-	
+#endif
 }
 #endif // __mkTag_h__

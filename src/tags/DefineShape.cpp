@@ -812,66 +812,69 @@ namespace MonkSWF {
 	
 	bool FillStyle::read( Reader* reader, bool support_32bit_color ) {
 		_type = reader->get<uint8_t>();
-		//assert( _type == 0 && "unsupported fill style" );
-		
-		if ( _type == SOLID_FILL )
+        switch(_type)
         {
-			
-			_color[0] = (reader->get<uint8_t>()/255.0f);
-			_color[1] = (reader->get<uint8_t>()/255.0f);
-			_color[2] = (reader->get<uint8_t>()/255.0f);
-			
+        case SOLID_FILL:
+			_color[0] = reader->get<uint8_t>()*SWF_INV_COLOR;
+			_color[1] = reader->get<uint8_t>()*SWF_INV_COLOR;
+			_color[2] = reader->get<uint8_t>()*SWF_INV_COLOR;
+
 			if( support_32bit_color )
-				_color[3] = (reader->get<uint8_t>()/255.0f);
+				_color[3] = reader->get<uint8_t>()*SWF_INV_COLOR;
 			else
 				_color[3] = 1.0f;
-			
+#ifdef USE_OPENVG
 			// create the openvg paint
 			_paint = vgCreatePaint();
 			vgSetParameterfv( _paint, VG_PAINT_COLOR, 4, &_color[0] );
-            //cout << "\t\tFill Style: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
-		}
-		
-
-		
-		if( _type == LINEAR_GRADIENT_FILL || _type == RADIAL_GRADIENT_FILL || _type == FOCAL_GRADIENT_FILL ) {
+#endif     
+            break;
+        case LINEAR_GRADIENT_FILL:
+        case RADIAL_GRADIENT_FILL:
+        case FOCAL_GRADIENT_FILL:
+#ifdef USE_OPENVG
 			reader->getMatrix( _gradient_matrix );
 			reader->align();
 			_gradient.read( reader, support_32bit_color );
-			//			assert(0);
             // create the openvg paint
             _paint = vgCreatePaint();
             _gradient.configPaint(_paint, _type, _gradient_matrix, support_32bit_color);
-		}
-		
-		if( _type == REPEATING_BITMAP_FILL || _type == CLIPPED_BITMAP_FILL 
-		   || _type == NON_SMOOTHED_CLIPPED_BITMAP_FILL || _type == NON_SMOOTHED_REPEATING_BITMAP_FILL ) {
+#endif
+            break;
+        case REPEATING_BITMAP_FILL:
+        case CLIPPED_BITMAP_FILL:
+        case NON_SMOOTHED_CLIPPED_BITMAP_FILL:
+        case NON_SMOOTHED_REPEATING_BITMAP_FILL:
 			_bitmap_id = reader->get<uint16_t>();
 			reader->getMatrix( _bitmap_matrix );
 			reader->align();
+            break;
+        default:
+            MK_ASSERT(0);
 		}
 		return true;
-	}
+	}	
 	
-	
-	bool ShapeWithStyle::read( Reader* reader, DefineShapeTag* define_shape_tag ) {
-		
-		_define_shape_tag = define_shape_tag;
+	bool ShapeWithStyle::read( Reader* reader, DefineShapeTag* define_shape_tag )
+    {
 		const TagHeader& shape_header = define_shape_tag->header();
 		bool support_32bit_color = (shape_header.code() != TAG_DEFINE_SHAPE && shape_header.code() != TAG_DEFINE_SHAPE2);
         // all shape definitions except DEFINESHAPE & DEFINESHAPE2 support 32 bit color
         // get the fill styles
 		uint16_t num_fill_styles = reader->get<uint8_t>();
-		if( num_fill_styles == 0xff )
+		if ( num_fill_styles == 0xff )
 			num_fill_styles = reader->get<uint16_t>();
 		
 		for ( int i = 0; i < num_fill_styles; i++ ) {
 			FillStyle fill;
 			fill.read( reader, support_32bit_color );
-			_fill_styles.push_back( fill );
-			
+            fill.print();
+            if (fill.getBitmap() < 0xffff)
+                _bitmap = fill.getBitmap();
+			//_fill_styles.push_back( fill );
 		}
-		
+        //skip rest data
+#if 0		
 		// get the line styles
 		uint16_t num_line_styles = reader->get<uint8_t>();
 		if( num_line_styles == 0xff )
@@ -1115,15 +1118,12 @@ namespace MonkSWF {
 			Path* path = *contour_iter;
 			path->addToShapeWithStyle( this );
 		}
-		
-		
+#endif		
 		return true;
 	}
 	
-	
-	
-	
 	void ShapeWithStyle::draw() {
+#ifdef USE_OPENVG
 		for ( OpenVGPathArrayIter iter = _paths.begin(); iter != _paths.end(); iter++ ) {
 			OpenVGPath &path = *iter;
 			uint32_t path_style = 0;
@@ -1143,33 +1143,44 @@ namespace MonkSWF {
 			if( path_style != 0 )
 				vgDrawPath( path._vgpath, path_style );
 		}
-	}
+#endif
+    }
 	
-	bool DefineShapeTag::read( Reader* reader, SWF* ) {
-        int32_t curr = reader->getCurrentPos();
-
+	bool DefineShapeTag::read( Reader* reader, SWF* )
+    {
+        int32_t start = reader->getCurrentPos();
 		_shape_id = reader->get<uint16_t>();
 		reader->getRectangle( _bounds );
 		
-		reader->skip( length() - curr );
-		//_shape_with_style.read( reader, this );
-		
+		_shape_with_style.read( reader, this );
+
+        //skip rest data
+        int32_t end = reader->getCurrentPos();
+        reader->skip( length() - end + start );
+
 		// todo: DEFINESHAPE4!		
 		return true;
 	}
 	
 	void DefineShapeTag::print() {
 		_header.print();
-		MK_TRACE("\tDEFINESHAPE: id=%d, w=%f, h=%f\n", _shape_id, _bounds.xmax-_bounds.xmin, _bounds.ymax-_bounds.ymin);
-		//		cout << "shape id: "		<< _shape_id << endl;
-		//		cout << "frame width: "		<< ((_bounds.xmax - _bounds.xmin)/20.0f) << endl;
-		//		cout << "frame height: "	<< ((_bounds.ymax - _bounds.ymin)/20.0f) << endl;
-		
+		MK_TRACE("id=%d, w=%f, h=%f\n", _shape_id, _bounds.xmax-_bounds.xmin, _bounds.ymax-_bounds.ymin);
 	}
+
+    bool DefineShapeTag::process(SWF* swf )
+    {
+        swf->addCharacter( this, _shape_id );
+        return true; // keep tag
+    }
 	
 	void DefineShapeTag::draw(SWF* swf, const CXFORM& cxform) {
-		//_shape_with_style.draw();
-        swf->GetRenderer()->drawQuad(_bounds,cxform);
+        uint16_t bitmap = _shape_with_style.getBitmap();
+        if (bitmap)
+        {
+            uint32_t texture = swf->getAsset(bitmap);
+            Renderer::getRenderer()->applyTexture(texture);
+        }
+        Renderer::getRenderer()->drawQuad(_bounds,cxform);
 	}
 	
 	ITag* DefineShapeTag::create( TagHeader* header ) {

@@ -15,15 +15,16 @@
 
 namespace MonkSWF {
 
-	class DefineSpriteTag : public IDefineSpriteTag {
+	class DefineSpriteTag : public ITag {
 	public:
 		DefineSpriteTag( TagHeader& h )
-		:	IDefineSpriteTag( h )
+		:	ITag( h )
 		{
 		}
 		
 		virtual ~DefineSpriteTag();
 		
+        virtual bool process(SWF* swf );
 		virtual bool read( Reader* reader, SWF* );
 		virtual void print();
 		
@@ -32,6 +33,8 @@ namespace MonkSWF {
 		static ITag* create( TagHeader* header );
 		
 	private:
+		uint16_t		_sprite_id;
+		uint16_t		_frame_count;
 		FrameList		_frame_list;
 	};
 }

@@ -31,13 +31,15 @@ namespace MonkSWF {
 		bool read( Reader* reader );
 		void print();
 		
-		float getFrameWidth() const {
-			return (_frame_size.xmax - _frame_size.xmin);
-		}
-		float getFrameHeight() const {
-			return (_frame_size.ymax - _frame_size.ymin);
-		}
-		float getFrameRate() const {
+        //The FrameSize RECTalways has Xmin and Ymin value of 0;
+        /*
+		float getFrameWidth() const {return (_frame_size.xmax - _frame_size.xmin);}
+		float getFrameHeight() const {return (_frame_size.ymax - _frame_size.ymin);	}
+        */
+		float getFrameWidth() const {return _frame_size.xmax; }
+		float getFrameHeight() const {return _frame_size.ymax; }
+
+        float getFrameRate() const {
 			return _frame_rate;
 		}
 		int getFrameCount() const {

@@ -14,23 +14,19 @@
 
 namespace MonkSWF {
 	
-	class ShowFrameTag : public IShowFrameTag {
+	class ShowFrameTag : public ITag {
 	public:
 		ShowFrameTag( TagHeader& h ) 
-		: IShowFrameTag( h )
+		: ITag( h )
 		{}
 		
 		virtual ~ShowFrameTag()
         {}
 		
-		virtual bool read( Reader* reader, SWF* ) {
-			return true;
-		}
+        virtual bool read( Reader* reader, SWF* ) { return true; }
 
-		virtual void print() {
-			MK_TRACE("SHOWFRAME\n");
-		}
-		
+		virtual void print() { MK_TRACE("SHOW_FRAME\n"); }
+	
 		static ITag* create( TagHeader* header ) {
 			return (ITag*)(new ShowFrameTag( *header ));
 		}				

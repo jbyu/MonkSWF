@@ -15,19 +15,98 @@
 #include <string>
 #include <time.h>
 #include "SOIL.h"
-
-#if 1
 #include "mkSWF.h"
 
 MonkSWF::SWF *gpSWF = NULL;
-float sfSWF_HEIGHT = 0;
+unsigned int suDefaultTexture = 0;
+const GLuint kStencilMask = 0xffffffff;
 
+typedef std::map<std::string, unsigned int> AssetCache;
+
+#define USE_FMOD
+#ifdef  USE_FMOD
+#include "fmod.hpp"
+#include "fmod_errors.h"
+
+FMOD::System *gpFMOD = NULL;
+
+void ERRCHECK(FMOD_RESULT result)
+{
+    if (result != FMOD_OK)
+    {
+        printf("FMOD error! (%d) %s\n", result, FMOD_ErrorString(result));
+        exit(-1);
+    }
+}
+
+class fmodSpeaker : public MonkSWF::Speaker
+{
+    AssetCache moCache;
+
+public:
+    ~fmodSpeaker()
+    {
+        FMOD_RESULT result;
+        AssetCache::iterator it = moCache.begin();
+        while(moCache.end() != it)
+        {
+            FMOD::Sound *sound = (FMOD::Sound *)it->second;
+            result = sound->release();
+            ERRCHECK(result);
+            ++it;
+        }
+    }
+
+    virtual unsigned int getSound( const char *filename )
+    {
+        AssetCache::iterator it = moCache.find(filename);
+        if (moCache.end()!=it)
+            return it->second;
+
+        FMOD_RESULT result;
+        FMOD::Sound *sound;
+        result = gpFMOD->createSound(filename, FMOD_HARDWARE, 0, &sound);
+        ERRCHECK(result);
+        unsigned int ret = (unsigned int)sound;
+        moCache[filename] = ret;
+        return ret;
+    }
+    virtual void playSound( unsigned int sound, bool loop, bool stop, bool noMultiple )
+    {
+        FMOD::Channel *channel = 0;
+        FMOD_RESULT result;
+        result = gpFMOD->playSound(FMOD_CHANNEL_FREE, (FMOD::Sound *)sound, false, &channel);
+        ERRCHECK(result);
+    }
+};
+
+#endif//USE_FMOD
+
+//=========================================================================
+uint32_t myLoadAssetCallback( const char *name )
+{
+    if (strstr(name,".png"))
+    {
+        return MonkSWF::Renderer::getRenderer()->getTexture(name);
+    }
+    else if (strstr(name,".wav"))
+    {
+        return MonkSWF::Speaker::getSpeaker()->getSound(name);
+    }
+    return 0;
+}
+
+//=========================================================================
 class glRenderer : public MonkSWF::Renderer
 {
     typedef std::map<std::string, GLuint> TextureCache;
     TextureCache moCache;
+    int miMaskLevel;
 
 public:
+    glRenderer():miMaskLevel(0)
+    {
+    }
     ~glRenderer()
     {
         TextureCache::iterator it = moCache.begin();
@@ -38,6 +117,41 @@ public:
             ++it;
         }
     }
+    
+	void maskBegin(void)
+	{
+		if (0 == miMaskLevel)
+		    glEnable(GL_STENCIL_TEST);
+		// we set the stencil buffer to 'm_mask_level+1' 
+		// where we draw any polygon and stencil buffer is 'm_mask_level'
+		glStencilFunc(GL_EQUAL, miMaskLevel++, kStencilMask);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR); 
+		glColorMask(0, 0, 0, 0);
+	}
+
+	void maskEnd(void)
+	{	     
+		// we draw only where the stencil is m_mask_level (where the current mask was drawn)
+		glStencilFunc(GL_EQUAL, miMaskLevel, kStencilMask);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);	
+		glColorMask(1, 1, 1, 1);
+	}
+
+	void maskOffBegin(void)
+	{	     
+		MK_ASSERT(0 < miMaskLevel);
+		// we set the stencil buffer back to 'm_mask_level' 
+		// where the stencil buffer m_mask_level + 1
+		glStencilFunc(GL_EQUAL, miMaskLevel--, kStencilMask);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_DECR); 
+		glColorMask(0, 0, 0, 0);
+	}
+	void maskOffEnd(void)
+	{	     
+		maskEnd();
+		if (0 == miMaskLevel)
+			glDisable(GL_STENCIL_TEST); 
+	}
 
     void applyTransform( const MonkSWF::MATRIX3f& mtx )
     {
@@ -126,7 +240,7 @@ public:
 		    glTexCoord2f(0,1);
             glVertex2f(rect.xmin, rect.ymax);
 	    glEnd();
-
+#if 1
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, 1);
@@ -143,19 +257,20 @@ public:
 		    glTexCoord2f(0,1);
             glVertex2f(rect.xmin, rect.ymax);
 	    glEnd();
+#endif
     }
 
     unsigned int getTexture( const char *filename )
     {
         unsigned int ret = 0;
-        char path[256];
-        sprintf(path, "%s.png", filename);
-        TextureCache::iterator it = moCache.find(path);
+        //char path[256];
+        //sprintf_s(path, 256, "%s.png", filename);
+        TextureCache::iterator it = moCache.find(filename);
         if (moCache.end()!=it)
             return it->second;
 
         ret = SOIL_load_OGL_texture(
-					path,
+					filename,
 					SOIL_LOAD_AUTO,
 					SOIL_CREATE_NEW_ID,
 					SOIL_FLAG_POWER_OF_TWO
@@ -167,32 +282,55 @@ public:
 					//| SOIL_FLAG_CoCg_Y
 					//| SOIL_FLAG_TEXTURE_RECTANGLE
 					);
-        moCache[path] = ret;
+        moCache[filename] = ret;
         return ret;
     }
 
 };
 
-
+//=========================================================================
 void _terminate_(void)
 {
-    delete gpSWF->GetRenderer();
+#ifdef  USE_FMOD
+    delete MonkSWF::Speaker::getSpeaker();
+    FMOD_RESULT result;
+    result = gpFMOD->close();
+    ERRCHECK(result);
+    result = gpFMOD->release();
+    ERRCHECK(result);
+#endif
+    glDeleteTextures(1, &suDefaultTexture);
+    delete MonkSWF::Renderer::getRenderer();
 	delete gpSWF;
     gpSWF = NULL;
 }
-
-#endif
 
 //Called to update the display.
 //You should call glutSwapBuffers after all of your rendering to display what you rendered.
 //If you need continuous updates of the screen, call glutPostRedisplay() at the end of the function.
 void display()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-    if (gpSWF) gpSWF->draw();
+    if (gpSWF) 
+    {
+        const MonkSWF::COLOR4f& color = gpSWF->getBackgroundColor();
+        const float w = gpSWF->getFrameWidth();
+        const float h = gpSWF->getFrameHeight();
+        glDisable(GL_TEXTURE_2D);
+   	    glColor4f(color.r, color.g, color.b, color.a);
+	    glBegin(GL_QUADS);
+	    glVertex2f(0, 0);
+	    glVertex2f(w, 0);
+	    glVertex2f(w, h);
+	    glVertex2f(0, h);
+	    glEnd();
+        glBindTexture(GL_TEXTURE_2D, suDefaultTexture);
+        glEnable(GL_TEXTURE_2D);
+        gpSWF->draw();
+    }
 
 	glutSwapBuffers();
 }
@@ -233,7 +371,7 @@ void keyboard(unsigned char key, int x, int y)
     case 'z':
         if (gpSWF) {
             gpSWF->step();
-            printf("frame[%d]\n",gpSWF->getFrame());
+            printf("frame[%d]\n",gpSWF->getCurrentFrame());
         }
         break;
     case 32:
@@ -254,12 +392,14 @@ void Timer(int)
 	float delta = float(tick - siLastTick) *0.001f;
 	siLastTick = tick;
 
-    if(gbUpdate)
+    if (gbUpdate)
     {
-        if (gpSWF)
-            gpSWF->play(delta);
+        if (gpSWF) gpSWF->play(delta);
     }
-
+#ifdef  USE_FMOD
+    if (gpFMOD)
+        gpFMOD->update();
+#endif
 	glutPostRedisplay();
 	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 }
@@ -270,12 +410,12 @@ int _tmain(int argc, char* argv[])
     if (argc < 2) return 0;
 
     atexit(_terminate_);
-
     glutInit(&argc, argv);
 
-	int width =  960;
-	int height = 960;
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+	int width =  640;
+	int height = 480;
+
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_STENCIL | GLUT_DOUBLE);
 	glutInitWindowSize (width, height); 
 	glutInitWindowPosition (256, 32);
 	glutCreateWindow (argv[0]);
@@ -287,13 +427,29 @@ int _tmain(int argc, char* argv[])
 	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glEnable(GL_TEXTURE_2D);
+    //glDepthMask(false);
     glEnable(GL_BLEND);
-    glDepthMask(false);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     GLfloat colorFactor[4]={0};
     glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, colorFactor);
+
+    unsigned char temp[] = {255,0,0, 0,255,0, 0,0,255, 255,255,0 };
+    suDefaultTexture = SOIL_create_OGL_texture (temp,2,2,SOIL_LOAD_RGB,SOIL_CREATE_NEW_ID,0);
+    glBindTexture(GL_TEXTURE_2D, suDefaultTexture);
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    glEnable(GL_TEXTURE_2D);
+
+#ifdef  USE_FMOD
+    // initial fmod audio library
+    FMOD_RESULT result;
+    result = FMOD::System_Create(&gpFMOD);
+    ERRCHECK(result);
+    result = gpFMOD->init(32, FMOD_INIT_NORMAL, 0);
+    ERRCHECK(result);
+    MonkSWF::Speaker::setSpeaker(new fmodSpeaker);
+#endif
 
 #if 1
     char *filename = argv[1];
@@ -305,14 +461,21 @@ int _tmain(int argc, char* argv[])
     fread(pBuffer,size,1,fp);
     fclose(fp);
     MonkSWF::Reader reader(pBuffer, size);
+    MonkSWF::Renderer::setRenderer(new glRenderer);
+    MonkSWF::SWF::initialize(myLoadAssetCallback);
     gpSWF = new MonkSWF::SWF;
-    gpSWF->initialize(new glRenderer);
-    gpSWF->read(&reader);
-    sfSWF_HEIGHT = gpSWF->getFrameHeight();
+    bool ret = gpSWF->read(&reader);
     delete [] pBuffer;
 
-    const MonkSWF::COLOR4f& color = gpSWF->getBackgroundColor();
-   	glClearColor(color.r, color.g, color.b, color.a);
+    if (ret) {
+        width = (int)gpSWF->getFrameWidth();
+        height = (int)gpSWF->getFrameHeight();
+        glutReshapeWindow(width,height);
+    } else {
+        MessageBox(NULL, "Not Support Compressed SWF","Eror Format", MB_OK);
+        delete gpSWF;
+        gpSWF = NULL;
+    }
 #endif
 
 	siLastTick = clock();

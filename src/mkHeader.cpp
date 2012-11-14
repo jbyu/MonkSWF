@@ -9,6 +9,10 @@
 
 #include "mkHeader.h"
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #ifdef USE_ZLIB
 #include <zlib.h>
 #define MAX_BUFFER 1000000
@@ -82,7 +86,7 @@ namespace MonkSWF {
 			
 			reader->setNewData( _outputBuffer, _file_length );
 #else
-            MK_ASSERT(0);
+            return false;
 #endif
 		}
 		
@@ -105,5 +109,20 @@ namespace MonkSWF {
 		MK_TRACE("frame rate:\t%f\n",		_frame_rate);
 		MK_TRACE("frame count:\t%d\n",		_frame_count);
 	}
-	
+
+#ifdef WIN32
+    void Log(const char* szmsg, ...)
+    {
+        const int kMAXIMUM = 1024;
+	    static char buffer[kMAXIMUM];
+	    va_list arglist;
+	    va_start(arglist, szmsg);
+	    {
+		    vsprintf_s(buffer,kMAXIMUM,szmsg,arglist);
+		    OutputDebugString(buffer);
+	    }
+	    va_end(arglist);
+    }
+#endif
+
 }
