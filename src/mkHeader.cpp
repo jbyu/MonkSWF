@@ -8,6 +8,7 @@
  */
 
 #include "mkHeader.h"
+#include "mkReader.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -35,15 +36,15 @@ short int endianSwap16(short int val)
 
 namespace MonkSWF {
 	
-	bool Header::read( Reader* reader ) {
+	bool Header::read( Reader& reader ) {
 	
-		_signature[0] = reader->get<uint8_t>();
-		_signature[1] = reader->get<uint8_t>();
-		_signature[2] = reader->get<uint8_t>();
+		_signature[0] = reader.get<uint8_t>();
+		_signature[1] = reader.get<uint8_t>();
+		_signature[2] = reader.get<uint8_t>();
 		
-		_version = reader->get<uint8_t>();
+		_version = reader.get<uint8_t>();
 		
-		_file_length = reader->get<uint32_t>();
+		_file_length = reader.get<uint32_t>();
 		
 		if ( _signature[0] == 'C' ) {
 #ifdef USE_ZLIB
@@ -92,10 +93,10 @@ namespace MonkSWF {
 		
 		
 		// get the bound rectangle
-        reader->getRectangle(_frame_size);
-		uint16_t fr = reader->get<uint16_t>();
+        reader.getRectangle(_frame_size);
+		uint16_t fr = reader.get<uint16_t>();
 		_frame_rate = 1.f/(fr>>8);
-		_frame_count = reader->get<uint16_t>(); 
+		_frame_count = reader.get<uint16_t>(); 
 				
 		return true;
 	}

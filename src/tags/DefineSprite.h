@@ -11,7 +11,6 @@
 #define __DefineSprite_h__
 
 #include "mkTag.h"
-#include <map>
 
 namespace MonkSWF {
 
@@ -21,21 +20,22 @@ namespace MonkSWF {
 		:	ITag( h )
 		{
 		}
-		
+	
 		virtual ~DefineSpriteTag();
-		
-        virtual bool process(SWF* swf );
-		virtual bool read( Reader* reader, SWF* );
+
+		virtual bool read( Reader& reader, SWF&, MovieFrames& );
 		virtual void print();
-		
-		const FrameList& getFrameList(void) const { return _frame_list; }
-		
-		static ITag* create( TagHeader* header );
-		
+	
+		const MovieFrames& getMovieFrames(void) const { return _data; }
+
+		static ITag* create( TagHeader& header ) {
+		    return (ITag*)(new DefineSpriteTag( header ));
+	    }
+
 	private:
-		uint16_t		_sprite_id;
-		uint16_t		_frame_count;
-		FrameList		_frame_list;
+		uint16_t	_sprite_id;
+		uint16_t	_frame_count;
+		MovieFrames	_data;
 	};
 }
 #endif // __DefineSprite_h__

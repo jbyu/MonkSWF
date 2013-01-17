@@ -3,11 +3,15 @@ MonkSWF -- An SWF Animation Player
 
 ## Overview
 
-MonkSWF is a SWF (Adobe Flash) animation player.  It uses OpenVG as the
-rendering API.  If your platform does not support OpenVG you can use [MonkVG](https://github.com/micahpearlman/MonkVG).
+MonkSWF is a SWF (Adobe Flash) animation player.  It uses OpenVG as the rendering API. 
+If your platform does not support OpenVG you can use [MonkVG](https://github.com/micahpearlman/MonkVG).
 
-If you are looking to integrate this with your Cocos2D application there is an excellent article by
-Luke.  Check it out: http://blog.zincroe.com/2011/11/displaying-a-swf-on-the-iphone-with-cocos2d-and-monkswf/
+If you are looking to integrate this with your Cocos2D application there is an excellent article by Luke. 
+Check it out: http://blog.zincroe.com/2011/11/displaying-a-swf-on-the-iphone-with-cocos2d-and-monkswf/
+
+In NUBEE edition, MonkSWF is modified for bitmap animation and is not dependent on OpenVG, therefore,
+vector rendering is not supported. It also provide features for clipping, audio event and export bitmap filename by assets.
+
 
 ## Installation
 
@@ -19,19 +23,18 @@ If your platform does not support OpenVG download MonkVG with git:
 
 <tt>$ git clone git@github.com:micahpearlman/MonkVG.git</tt>
 
-There are currently iOS projects.
-
 TODO: standard *nix Makefiles.
 
 
 
 ## What is implemented
 
-- Most basic solid fills and strokes.
 - Sprite animations.
 
 ## TODO 
 
+- DoAction tags
+- Most basic solid fills and strokes.
 - Bitmap fills and strokes. 
 - Gradient fills and strokes.
 - Font Rendering.
@@ -44,20 +47,56 @@ responsibility to create there own OpenGL context. Also, if your
 application does any other OpenGL rendering it should save off the GL
 state and then restore before calling any MonkVG or MonkSWF methods.
 
+
+Graphics and Audio handling:
+
+	render handler
+        virtual unsigned int getTexture( const char *filename ) = 0;
+        virtual void applyTexture( unsigned int texture ) = 0;
+        virtual void applyTransform( const MATRIX3f& mtx ) = 0;
+        virtual void drawQuad(const RECT& rect, const CXFORM&) = 0;
+        virtual void maskBegin(void) = 0;
+        virtual void maskEnd(void) = 0;
+        virtual void maskOffBegin(void) = 0;
+        virtual void maskOffEnd(void) = 0;
+
+	sound handler
+        virtual unsigned int getSound( const char *filename ) = 0;
+        virtual void playSound( unsigned int sound, bool stop, bool noMultiple, bool loop ) = 0;
+
+	asset handler
+        typedef uint32_t (*LoadAssetCallback)( const char *name );
+		
+<pre><code>
+	uint32_t loadAssetCallback( const char *name )
+	{
+		if (strstr(name,".png"))
+		{
+			return MonkSWF::Renderer::getRenderer()->getTexture(name);
+		}
+		else if (strstr(name,".wav"))
+		{
+			return MonkSWF::Speaker::getSpeaker()->getSound(name);
+		}
+		return 0;
+	}
+</code></pre>
+
+
 Initialization:
 
 <pre><code>
+
 	#include <MonkSWF.h>
-	#include <vg/openvg.h>
-	#include <vg/vgu.h>
 	
 	char* filebuffer;
 	int filebuffersize;
 	... Load The SWF File into a buffer ...
 	MonkSWF::Reader r( filebuffer, filebuffersize );
-			
+    MonkSWF::Renderer::setRenderer(new glRenderer);
+    MonkSWF::Speaker::setSpeaker(new fmodSpeaker);
+    MonkSWF::SWF::initialize(loadAssetCallback);
 	MonkSWF::SWF* swf = new SWF();
-	swf->initialize();
 	swf->read( &r );	// read in SWF file
 
 </code></pre>
@@ -71,50 +110,10 @@ This example shows rendering the root SWF Movie.
 	... begin opengl context ...
 	
 	float deltaTime = calculateDeltaTime();
-	if ( deltaTime > 1.0f / swf->getFrameRate() ) {
-		frame++;
-	}
-	if ( frame >= swf->numFrames() ) {	// loop
-		frame = 0;
-	}
-	
-	// setup OpenVG
-	vgLoadIdentity();
-	vgRotate( angle );
-	
-	swf->drawFrame( frame );
+	swf->update(deltaTime);
+
+	swf->draw();
 
 	... end opengl context ...
 </code></pre>
 
-Alternatively you render a specific sprite in a SWF.
-
-<pre><code>
-	// get a specific sprite
-	MonkSWF::IDefineSpriteTag*	sprite = swf->spriteAt( spriteIdx );
-	
-	... begin opengl context ...
-	
-	float deltaTime = calculateDeltaTime();
-	if ( deltaTime > 1.0f / swf->getFrameRate() ) {
-		frame++;
-	}
-	if ( frame >= sprite->frameCount() ) {	// loop
-		frame = 0;
-	}
-	
-	// setup OpenVG
-	vgLoadIdentity();
-	vgRotate( angle );
-	
-	sprite->draw( frame );
-
-	... end opengl context ...
-
-</code></pre>
-
-## Donate
-
-![Donate](http://www.pledgie.com/campaigns/12954.png)
-
-<a href='http://www.pledgie.com/campaigns/12954'><img alt='Click here to lend your support to: MonkSWF and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/12954.png?skin_name=chrome' border='0' /></a>

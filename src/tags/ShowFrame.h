@@ -23,12 +23,12 @@ namespace MonkSWF {
 		virtual ~ShowFrameTag()
         {}
 		
-        virtual bool read( Reader* reader, SWF* ) { return true; }
+        virtual bool read( Reader& reader, SWF&, MovieFrames& ) { return false; } //delete tag
 
 		virtual void print() { MK_TRACE("SHOW_FRAME\n"); }
-	
-		static ITag* create( TagHeader* header ) {
-			return (ITag*)(new ShowFrameTag( *header ));
+
+		static ITag* create( TagHeader& header ) {
+			return (ITag*)(new ShowFrameTag( header ));
 		}				
 	};
 }

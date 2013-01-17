@@ -11,11 +11,11 @@
 #define __mkHeader_h__
 
 #include "mkCommon.h"
-#include "mkReader.h"
 #include "mkTypes.h"
 
 namespace MonkSWF {
 	
+    class Reader;
 	class Header {
 	public:
 		Header() : _outputBuffer(NULL)
@@ -28,7 +28,7 @@ namespace MonkSWF {
 			}
 		}
 		
-		bool read( Reader* reader );
+		bool read( Reader& reader );
 		void print();
 		
         //The FrameSize RECTalways has Xmin and Ymin value of 0;
@@ -36,15 +36,10 @@ namespace MonkSWF {
 		float getFrameWidth() const {return (_frame_size.xmax - _frame_size.xmin);}
 		float getFrameHeight() const {return (_frame_size.ymax - _frame_size.ymin);	}
         */
-		float getFrameWidth() const {return _frame_size.xmax; }
-		float getFrameHeight() const {return _frame_size.ymax; }
-
-        float getFrameRate() const {
-			return _frame_rate;
-		}
-		int getFrameCount() const {
-			return _frame_count;
-		}
+		float   getFrameWidth() const { return _frame_size.xmax; }
+		float   getFrameHeight()const { return _frame_size.ymax; }
+        float   getFrameRate()  const { return _frame_rate; }
+		int     getFrameCount() const { return _frame_count; }
 	
 	private:
 		uint8_t		_signature[3];

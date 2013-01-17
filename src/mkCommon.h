@@ -24,8 +24,15 @@ void Log(const char* szmsg, ...);
 #define MK_ASSERT	assert
 #define MK_TRACE	Log
 #else
+    
+#ifdef WIN32
 #define MK_ASSERT	(void)
 #define MK_TRACE	(void)
+#else
+#define MK_ASSERT(...)
+#define MK_TRACE(...)
+#endif    
+    
 #endif
 
 }

@@ -13,9 +13,7 @@
 #include "mkReader.h"
 #include "mkHeader.h"
 #include "mkTag.h"
-#include <map> 
-#include <vector>
-#include <list>
+#include "mkMovieClip.h"
 
 #ifdef USE_BOOST
 #include <boost/shared_ptr.hpp>
@@ -26,20 +24,21 @@ using namespace std;
 
 namespace MonkSWF {
 
-	class MovieClip;
-
 //=========================================================================
+
     class Renderer
     {
         static Renderer     *spRenderer;
 
     public:
-        virtual ~Renderer() {}
-        virtual void applyTexture( unsigned int texture ) = 0;
+        virtual ~Renderer() { clear(); }
+
         virtual void applyTransform( const MATRIX3f& mtx ) = 0;
-        //virtual void applyPassMult( const CXFORM& color  ) = 0;
-        //virtual void applyPassAdd( const CXFORM& color  ) = 0;
-        virtual void drawQuad(const RECT& rect, const CXFORM&) = 0;
+        virtual void drawQuad(const RECT& rect, const CXFORM&, unsigned int texture) = 0;
+        virtual void drawImportAsset(const RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle) = 0;
+
+        virtual void drawBegin(void) = 0;
+        virtual void drawEnd(void) = 0;
 
         virtual void maskBegin(void) = 0;
         virtual void maskEnd(void) = 0;
@@ -47,10 +46,12 @@ namespace MonkSWF {
         virtual void maskOffEnd(void) = 0;
 
         virtual unsigned int getTexture( const char *filename ) = 0;
+        virtual void clear( void ) {}
 
         static Renderer* getRenderer(void) { return spRenderer; }
         static void setRenderer(Renderer *r) { spRenderer = r; }
     };
+
 //=========================================================================
    class Speaker
    {
@@ -67,29 +68,19 @@ namespace MonkSWF {
    };
 
 //=========================================================================
-	class SWF
+	class SWF : public MovieClip
     {
-	public:
+        friend class PlaceObjectTag;
+        MovieClip *createMovieClip(const ITag &tag);
 
-#ifdef USE_BOOST
-		typedef boost::shared_ptr<SWF> SmartPtr;
-		static SWF::SmartPtr create( ) {
-			return boost::make_shared<SWF>( );
-		}
-#endif
+    public:
+        // factory function prototype
+		typedef ITag* (*TagFactoryFunc)( TagHeader& );
+        typedef uint32_t (*LoadAssetCallback)( const char *name, bool import );
+        typedef void (*GetURLCallback)( MovieClip& );
 
-		// factory function prototype
-		typedef ITag* (*TagFactoryFunc)( TagHeader* );
-
-        typedef uint32_t (*LoadAssetCallback)( const char *name );
-
-		SWF(); 
-        ~SWF();
-		
 		static bool initialize(LoadAssetCallback);
-		bool read( Reader *reader );
-		void print();
-		
+
 		static void addFactory( uint32_t tag_code, TagFactoryFunc factory ) { _tag_factories[ tag_code ] = factory;	}
 
 		static TagFactoryFunc getTagFactory( uint32_t tag_code ) {
@@ -98,6 +89,12 @@ namespace MonkSWF {
 				return factory->second;
 			return NULL;
 		}
+
+        SWF(); 
+        ~SWF();
+
+		bool read( Reader &reader );
+		void print();
 		
 		void  addCharacter( ITag* tag, uint16_t cid ) { _dictionary[cid] = tag; }
 		ITag* getCharacter( uint16_t i ) {
@@ -108,58 +105,56 @@ namespace MonkSWF {
 			return it->second;
 		}
 		
-		Reader* reader() const { return _reader; }
-		
-		void draw(void);
-        void step(void);
-		void play(float delta);
+        MovieClip *duplicate(const char *name);
+        void updateDuplicate(float delta);
+        void drawDuplicate(void);
+
+        void update(float delta);
+        void draw(void);
+
+		static void drawMovieClip(MovieClip *movie, float alpha=1.f);
 
 		float getFrameWidth() const     { return _header.getFrameWidth(); }
 		float getFrameHeight() const    { return _header.getFrameHeight(); }
 		float getFrameRate() const      { return _header.getFrameRate(); }
-		int getFrameCount() const       { return _header.getFrameCount(); }
-		int getCurrentFrame(void) const;
 
         COLOR4f& getBackgroundColor(void) { return _bgColor; }
 
-		MovieClip *createMovieClip(const ITag &tag);
-
-        uint32_t getAsset(uint16_t id)
+        const Asset& getAsset(uint16_t id) const
         {
-            AssetDictionary::iterator it = moAssets.find(id);
+            AssetDictionary::const_iterator it = moAssets.find(id);
             if (moAssets.end() != it)
                 return it->second;
-            return 0;
+            return kNULL_ASSET;
         }
         
-        bool addAsset(uint16_t id, const char *name)
-        {
-            if (_asset_loader)
-            {
-                moAssets[id] = _asset_loader( name );
-                return true;
-            }
-            return false;
-        }
+        bool addAsset(uint16_t id, const char *name, bool import);
+
+        void setGetURL(GetURLCallback cb) { _getURL = cb; }
+        GetURLCallback getGetURL(void) { return _getURL; }
 
     private:
 		typedef std::map< uint32_t, TagFactoryFunc >    TagFactoryMap;
 		typedef std::map< uint16_t, ITag* >             CharacterDictionary;
-        typedef std::map< uint16_t, uint32_t >          AssetDictionary;
+        typedef std::map< uint16_t, Asset >             AssetDictionary;
+        typedef std::map< std::string, uint16_t >       SymbolDictionary;
 		typedef std::vector< MovieClip* >               MovieList;
 
 		float               _elapsedAccumulator;
-    	CharacterDictionary	_dictionary;
-		FrameList			_frame_list;
+		float               _elapsedAccumulatorDuplicate;
+		MovieFrames 	    _swf_data;
 		MovieList			_movie_list;
+        MovieList           _duplicates;
 		Header				_header;
+    	CharacterDictionary	_dictionary;
+        SymbolDictionary    _library;
 
         AssetDictionary     moAssets;
         COLOR4f             _bgColor;
-		Reader*				_reader;
-		MovieClip			*mpMovieClip;
-		static TagFactoryMap        _tag_factories;
-        static LoadAssetCallback    _asset_loader;
+        GetURLCallback      _getURL;
+
+		static TagFactoryMap            _tag_factories;
+        static LoadAssetCallback        _asset_loader;
 	};
 }
 #endif // __mkSWF_h__

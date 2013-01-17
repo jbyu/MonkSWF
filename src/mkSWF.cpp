@@ -15,8 +15,10 @@
 #include "tags/DefineSprite.h"
 #include "tags/SetBackgroundColor.h"
 #include "tags/ExportAssets.h"
+#include "tags/ImportAssets2.h"
 #include "tags/DefineSound.h"
 #include "tags/DoAction.h"
+#include "tags/FrameLabel.h"
 
 namespace MonkSWF {
 	
@@ -26,29 +28,17 @@ namespace MonkSWF {
 	SWF::TagFactoryMap SWF::_tag_factories;
 
 	SWF::SWF()
-	:_elapsedAccumulator(0.0f)
-	,mpMovieClip(NULL)
+    	:MovieClip(_swf_data)
+        ,_elapsedAccumulator(0.0f)
+        ,_elapsedAccumulatorDuplicate(0.0f)
+        ,_getURL(0)
 	{
+        _owner = this;
 	}
 
 	SWF::~SWF()
     {
-		// foreach frames in sprite
-		FrameList::iterator it = _frame_list.begin();
-		while (_frame_list.end() != it)
-        {
-			// foreach tags in frame
-			TagList *_tag_list = *it;
-            TagList::iterator tag_it = _tag_list->begin();
-            while(_tag_list->end() != tag_it)
-            {
-                delete *tag_it;
-                ++tag_it;
-            }
-			// delete container
-            delete *it;
-            ++it;
-        }
+        MovieClip::destroyFrames(_swf_data);
 		// foreach movieclip in sprite
 		MovieList::iterator mit = _movie_list.begin();
 		while (_movie_list.end() != mit)
@@ -56,19 +46,17 @@ namespace MonkSWF {
             delete *mit;
             ++mit;
         }
-		// swf movie
-		delete mpMovieClip;
-		mpMovieClip = NULL;
     }
 
 	MovieClip *SWF::createMovieClip(const ITag &tag)
 	{
 		const DefineSpriteTag& spriteImpl = (const DefineSpriteTag&) tag;
-		MovieClip *movie = new MovieClip( spriteImpl.getFrameList() );
+        MovieClip *movie = new MovieClip( this, spriteImpl.getMovieFrames() );
 		_movie_list.push_back(movie);
 		return movie;
 	}
 
+    //static function
 	bool SWF::initialize(LoadAssetCallback func) {
         _asset_loader = func;
 		// setup the factories
@@ -85,73 +73,27 @@ namespace MonkSWF {
 		addFactory( TAG_SHOW_FRAME,		ShowFrameTag::create );
 		
         addFactory( TAG_EXPORT_ASSETS,  ExportAssetsTag::create );
+        addFactory( TAG_IMPORT_ASSETS2, ImportAssets2Tag::create );
+
         addFactory( TAG_DEFINE_SOUND,   DefineSoundTag::create );
         addFactory( TAG_START_SOUND,    StartSoundTag::create );
 
         addFactory( TAG_DO_ACTION,      DoActionTag::create );
+        addFactory( TAG_FRAME_LABEL,    FrameLabelTag::create );
 
 		addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
 		return true;
 	}
 	
-	bool SWF::read( Reader* reader ) {
-		_reader = reader;
+	bool SWF::read( Reader& reader ) {
 		bool ret = _header.read( reader );
         if (false == ret)
             return false;
-		
-		// get the first tag
-        TagHeader oHeader;
-		TagHeader *tag_header = &oHeader;//new TagHeader();
-		tag_header->read( reader );
-				
-		// get all tags and build frame lists
-		TagList* frame_tags = new TagList;
-		while( tag_header->code() != 0 ) { // while not the end tag 
-			ITag* tag = NULL;
-            const uint32_t code = tag_header->code();
-			TagFactoryFunc factory = getTagFactory( code );
-			if ( factory ) {
-				tag = factory( tag_header );
 
-				int32_t end_pos = reader->getCurrentPos() + tag->length();
-				tag->read( reader, this );
-				tag->print();
-				reader->align();
+		createFrames(reader, *this, _swf_data);
 
-				int32_t dif = end_pos - reader->getCurrentPos();
-				if( dif != 0 ) {
-					MK_TRACE("WARNING: tag not read correctly. trying to skip.\n");
-					reader->skip( dif );
-				}
-                // process tag
-                bool keepTag = tag->process(this);
-                if (keepTag) {
-                    frame_tags->push_back( tag );
-                } else {
-                    delete tag;
-                }
-                // create a new frame
-                if ( TAG_SHOW_FRAME == code )
-                {
-					_frame_list.push_back( frame_tags );
-					frame_tags = new TagList;
-                }
-			} else { // no registered factory so skip this tag
-				MK_TRACE("*** SKIP *** ");
-				tag_header->print();
-				reader->skip( tag_header->length() );
-				//delete tag_header;
-			}
-			
-			//tag_header = new TagHeader();
-			tag_header->read( reader );
-		}
-
-		delete frame_tags;
-		MK_ASSERT(_frame_list.size() == getFrameCount());
-		mpMovieClip = new MovieClip( _frame_list );
-		mpMovieClip->gotoFrame( 0 );
+        MK_ASSERT(getFrameCount() == _header.getFrameCount());
+		this->gotoFrame( 0 );
 		return true;
 	}
 	
@@ -159,29 +101,113 @@ namespace MonkSWF {
 	{
 		_header.print();
 	}
-	
-	void SWF::play( float delta )
+
+    bool SWF::addAsset(uint16_t id, const char *name, bool import)
+    {
+        if (_asset_loader)
+        {
+            uint32_t handle = _asset_loader( name, import );
+            if (0 != handle) {
+                Asset asset = { import, handle };
+                moAssets[id] = asset;
+            } else {
+                _library[name] = id;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    MovieClip *SWF::duplicate(const char *name)
+    {
+        MovieClip *movie = NULL;
+        SymbolDictionary::const_iterator it = _library.find(name);
+        if (_library.end() != it)
+        {
+            ITag *tag = _dictionary[it->second];
+            if ( tag->code() == TAG_DEFINE_SPRITE ) {
+                // create a new instance for playback
+				movie = createMovieClip( *tag );
+                movie->createTransform();
+                _duplicates.push_back(movie);
+            }
+        }
+        return movie;
+    }
+
+ 	void SWF::updateDuplicate( float delta )
+	{
+        _elapsedAccumulatorDuplicate += delta;
+        const float secondPerFrame = getFrameRate();
+        while (secondPerFrame <= _elapsedAccumulatorDuplicate)
+        {
+            _elapsedAccumulatorDuplicate -= secondPerFrame;
+		    MovieList::iterator it = _duplicates.begin();
+		    while (_duplicates.end() != it)
+            {
+                (*it)->update();
+                ++it;
+            }
+        }
+    }
+
+    extern MATRIX3f goRootMatrix;
+    extern CXFORM goRootCXForm;
+
+	void SWF::drawDuplicate(void)
+    {
+        Renderer::getRenderer()->drawBegin();
+	    MovieList::iterator it = _duplicates.begin();
+	    while (_duplicates.end() != it)
+        {
+            MATRIX *xform = (*it)->getTransform();
+            MK_ASSERT(xform);
+            MATRIX3f origMTX = goRootMatrix, mtx;
+            MATRIX3fSet(mtx, *xform); // convert matrix format
+            MATRIX3fMultiply(goRootMatrix, mtx, goRootMatrix);
+
+            (*it)->draw();
+            ++it;
+
+    		// restore old matrix
+            goRootMatrix = origMTX;
+        }
+        Renderer::getRenderer()->drawEnd();
+	}
+
+	void SWF::drawMovieClip(MovieClip *movie, float alpha)
+	{
+		if (movie == NULL)
+			return;
+
+        MATRIX *xform = movie->getTransform();
+        MK_ASSERT(xform);
+        MATRIX3f origMTX = goRootMatrix, mtx;
+        MATRIX3fSet(mtx, *xform); // convert matrix format
+        MATRIX3fMultiply(goRootMatrix, mtx, goRootMatrix);
+        float origAlpha = goRootCXForm.mult.a;
+        goRootCXForm.mult.a = alpha;
+
+		Renderer::getRenderer()->drawBegin();
+        movie->draw();
+        Renderer::getRenderer()->drawEnd();
+
+    	// restore old matrix
+        goRootMatrix = origMTX;
+        goRootCXForm.mult.a = origAlpha;
+	}
+
+	void SWF::update( float delta )
 	{
         _elapsedAccumulator += delta;
         const float secondPerFrame = getFrameRate();
         while (secondPerFrame <= _elapsedAccumulator)
         {
             _elapsedAccumulator -= secondPerFrame;
-			mpMovieClip->update();
-		}
+			MovieClip::update();
+        }
     }
-
-	void SWF::step( void )
-	{
-		mpMovieClip->gotoFrame( mpMovieClip->getFrame() + 1 );
-    }
-
-	int SWF::getCurrentFrame( void ) const
-	{
-        return mpMovieClip->getFrame();
-    }
-
-
+    
 	void SWF::draw(void) {
 #ifdef USE_OPENVG
 		// make sure we use even odd fill rule
@@ -196,9 +222,9 @@ namespace MonkSWF {
 		vgGetMatrix( oldMatrix );
 		vgMultMatrix( _rootTransform );
 #endif
-
-		mpMovieClip->draw( this );
-
+        Renderer::getRenderer()->drawBegin();
+		MovieClip::draw();
+        Renderer::getRenderer()->drawEnd();
 #ifdef USE_OPENVG
 		// restore old matrix
 		vgLoadMatrix( oldMatrix );

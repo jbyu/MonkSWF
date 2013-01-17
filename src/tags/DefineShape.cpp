@@ -15,20 +15,19 @@
 
 #include <iterator>
 #include <algorithm>
-#include <openvg.h>
-
-
+#include "openvg.h"		
+	
 using namespace std;
 
-#define vgSetParameteri     (void)
-#define vgSetParameterfv    (void)
-#define vgCreatePaint()     1
-#define vgAppendPathData    (void)
-#define vgGetParameteri     1;(void)
-#define vgCreatePath		1;(void)
-#define vgDrawPath          (void)
-#define vgSetf              (void)
-#define vgSetPaint          (void)
+#define vgSetParameteri(...)
+#define vgSetParameterfv(...)
+#define vgCreatePaint(...)      1
+#define vgAppendPathData(...)
+#define vgGetParameteri(...)    1
+#define vgCreatePath(...)		1
+#define vgDrawPath(...)
+#define vgSetf(...)
+#define vgSetPaint(...)
 
 namespace MonkSWF {
 	
@@ -51,7 +50,7 @@ namespace MonkSWF {
 		, _is_reversed( false )
 		, _original( 0 )
 		{}
-		
+		virtual ~IEdge(){}
 		
 		VGbyte type() {
 			return _type;
@@ -645,7 +644,9 @@ namespace MonkSWF {
 		for ( PathArrayIter it = paths.begin(); it != paths.end(); it++ ) {
 			Path* cur_path = *it;
 			
-			if (cur_path == to_connect || cur_path->isClosed() /*|| (cur_path->getOriginal() == to_connect) || (to_connect->getOriginal() == cur_path)/* || (cur_path->isReversed() != to_connect->isReversed())*/ ) {
+            /*|| (cur_path->getOriginal() == to_connect) || (to_connect->getOriginal() == cur_path) || (cur_path->isReversed() != to_connect->isReversed())*/
+			if (cur_path == to_connect || cur_path->isClosed() )
+            {
 				continue;
 			}
 			
@@ -810,17 +811,17 @@ namespace MonkSWF {
 		return true;
 	}
 	
-	bool FillStyle::read( Reader* reader, bool support_32bit_color ) {
-		_type = reader->get<uint8_t>();
+	bool FillStyle::read( Reader& reader, bool support_32bit_color ) {
+		_type = reader.get<uint8_t>();
         switch(_type)
         {
         case SOLID_FILL:
-			_color[0] = reader->get<uint8_t>()*SWF_INV_COLOR;
-			_color[1] = reader->get<uint8_t>()*SWF_INV_COLOR;
-			_color[2] = reader->get<uint8_t>()*SWF_INV_COLOR;
+			_color[0] = reader.get<uint8_t>()*SWF_INV_COLOR;
+			_color[1] = reader.get<uint8_t>()*SWF_INV_COLOR;
+			_color[2] = reader.get<uint8_t>()*SWF_INV_COLOR;
 
 			if( support_32bit_color )
-				_color[3] = reader->get<uint8_t>()*SWF_INV_COLOR;
+				_color[3] = reader.get<uint8_t>()*SWF_INV_COLOR;
 			else
 				_color[3] = 1.0f;
 #ifdef USE_OPENVG
@@ -845,9 +846,9 @@ namespace MonkSWF {
         case CLIPPED_BITMAP_FILL:
         case NON_SMOOTHED_CLIPPED_BITMAP_FILL:
         case NON_SMOOTHED_REPEATING_BITMAP_FILL:
-			_bitmap_id = reader->get<uint16_t>();
-			reader->getMatrix( _bitmap_matrix );
-			reader->align();
+			_bitmap_id = reader.get<uint16_t>();
+			reader.getMatrix( _bitmap_matrix );
+			reader.align();
             break;
         default:
             MK_ASSERT(0);
@@ -855,15 +856,15 @@ namespace MonkSWF {
 		return true;
 	}	
 	
-	bool ShapeWithStyle::read( Reader* reader, DefineShapeTag* define_shape_tag )
+	bool ShapeWithStyle::read( Reader& reader, DefineShapeTag* define_shape_tag )
     {
 		const TagHeader& shape_header = define_shape_tag->header();
 		bool support_32bit_color = (shape_header.code() != TAG_DEFINE_SHAPE && shape_header.code() != TAG_DEFINE_SHAPE2);
         // all shape definitions except DEFINESHAPE & DEFINESHAPE2 support 32 bit color
         // get the fill styles
-		uint16_t num_fill_styles = reader->get<uint8_t>();
+		uint16_t num_fill_styles = reader.get<uint8_t>();
 		if ( num_fill_styles == 0xff )
-			num_fill_styles = reader->get<uint16_t>();
+			num_fill_styles = reader.get<uint16_t>();
 		
 		for ( int i = 0; i < num_fill_styles; i++ ) {
 			FillStyle fill;
@@ -1146,18 +1147,24 @@ namespace MonkSWF {
 #endif
     }
 	
-	bool DefineShapeTag::read( Reader* reader, SWF* )
+	bool DefineShapeTag::read( Reader& reader, SWF& swf, MovieFrames& data )
     {
-        int32_t start = reader->getCurrentPos();
-		_shape_id = reader->get<uint16_t>();
-		reader->getRectangle( _bounds );
+        int32_t start = reader.getCurrentPos();
+		_shape_id = reader.get<uint16_t>();
+		reader.getRectangle( _bounds );
 		
 		_shape_with_style.read( reader, this );
 
         //skip rest data
-        int32_t end = reader->getCurrentPos();
-        reader->skip( length() - end + start );
+        int32_t end = reader.getCurrentPos();
+        reader.skip( length() - end + start );
 
+        // get texture
+        uint16_t bitmap = _shape_with_style.getBitmap();
+        if (bitmap)
+            _asset = swf.getAsset(bitmap);
+ 
+        swf.addCharacter( this, _shape_id );
 		// todo: DEFINESHAPE4!		
 		return true;
 	}
@@ -1166,25 +1173,18 @@ namespace MonkSWF {
 		_header.print();
 		MK_TRACE("id=%d, w=%f, h=%f\n", _shape_id, _bounds.xmax-_bounds.xmin, _bounds.ymax-_bounds.ymin);
 	}
-
-    bool DefineShapeTag::process(SWF* swf )
-    {
-        swf->addCharacter( this, _shape_id );
-        return true; // keep tag
-    }
 	
-	void DefineShapeTag::draw(SWF* swf, const CXFORM& cxform) {
-        uint16_t bitmap = _shape_with_style.getBitmap();
-        if (bitmap)
+	void DefineShapeTag::draw(const CXFORM& cxform) {
+        if (_asset.import)
         {
-            uint32_t texture = swf->getAsset(bitmap);
-            Renderer::getRenderer()->applyTexture(texture);
+            Renderer::getRenderer()->drawImportAsset(_bounds, cxform, _asset.handle);
+            return;
         }
-        Renderer::getRenderer()->drawQuad(_bounds,cxform);
+        Renderer::getRenderer()->drawQuad(_bounds, cxform, _asset.handle);
 	}
 	
-	ITag* DefineShapeTag::create( TagHeader* header ) {
-		return (ITag*)(new DefineShapeTag( *header ));
+	ITag* DefineShapeTag::create( TagHeader& header ) {
+		return (ITag*)(new DefineShapeTag( header ));
 	}
 	
 }

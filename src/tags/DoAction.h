@@ -8,7 +8,14 @@ namespace MonkSWF
 //=========================================================================
 	class DoActionTag : public ITag
     {
-        std::vector<uint8_t> moActions;
+        struct ACTION 
+        {
+            uint8_t code;
+            uint8_t padding;
+            uint16_t data;
+        };
+        typedef std::vector<ACTION> ActionList;
+        ActionList moActions;
 
 	public:
 		DoActionTag( TagHeader& h ) 
@@ -18,19 +25,24 @@ namespace MonkSWF
 		virtual ~DoActionTag()
         {}
 
-		virtual bool read( Reader* reader, SWF* swf);
+		virtual bool read( Reader& reader, SWF& swf, MovieFrames& data);
 
-        virtual bool process(SWF* swf ) { return true; }
+		virtual void print()
+        {
+    		_header.print();
+            ActionList::iterator it = moActions.begin();
+            while(moActions.end()!=it)
+            {
+                MK_TRACE("0x%x,", (*it).code);
+                ++it;
+            }
+            MK_TRACE("\n");
+        }
 
         virtual void setup(MovieClip&);
 
-		virtual void print() {
-    		_header.print();
-			//MK_TRACE("id=%d\n", _soundId);
-		}
-
-		static ITag* create( TagHeader* header ) {
-			return (ITag*)(new DoActionTag( *header ));
+		static ITag* create( TagHeader& header ) {
+			return (ITag*)(new DoActionTag( header ));
 		}				
     };
 }	

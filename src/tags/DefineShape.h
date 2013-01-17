@@ -11,9 +11,7 @@
 #define __DefineShape_h__
 
 #include "mkTag.h"
-#include <vector>
-#include <list>
-#include <map>
+#include "mkMovieClip.h"
 
 typedef float          VGfloat;
 typedef signed char    VGbyte;
@@ -98,7 +96,7 @@ namespace MonkSWF {
 		//,	_paint(VG_INVALID_HANDLE)
 		{}
 		
-		bool read( Reader* reader, bool support_32bit_color );
+		bool read( Reader& reader, bool support_32bit_color );
 		
 #ifdef USE_OPENVG
 		inline VGPaint getPaint() {
@@ -179,7 +177,7 @@ namespace MonkSWF {
 //=========================================================================
 	class ShapeWithStyle {
 	public:
-		bool read( Reader* reader, DefineShapeTag* define_shape_tag );
+		bool read( Reader& reader, DefineShapeTag* define_shape_tag );
 		void draw();
 
         uint16_t getBitmap(void) const { return _bitmap; }
@@ -216,27 +214,30 @@ namespace MonkSWF {
 	public:
 		DefineShapeTag( TagHeader& h )
 			:ITag( h )
-		{}
+            ,_shape_id(0)
+		{
+            _asset.import = false;
+            _asset.handle = 0;
+        }
 		
 		virtual ~DefineShapeTag()
         {
 		}
 		
-        virtual bool process(SWF* swf );
-		virtual bool read( Reader* reader, SWF* );
+		virtual bool read( Reader& reader, SWF&, MovieFrames& data );
 		virtual void print();
 		
-		virtual void draw( SWF* swf, const CXFORM& );
+		void draw( const CXFORM& );
+        const RECT& getRectangle(void) const { return _bounds;}
 		
-		// regular DefineShape tag == 2
-		static ITag* create( TagHeader* header );
+		static ITag* create( TagHeader& header );
 		
 	private:
-		uint16_t			_shape_id;
-		RECT				_bounds;
-		ShapeWithStyle		_shape_with_style;
-	};
-	
+		uint16_t		_shape_id;
+        Asset           _asset;
+		RECT			_bounds;
+		ShapeWithStyle	_shape_with_style;
+    };
 	
 }
 #endif // __DefineShape_h__

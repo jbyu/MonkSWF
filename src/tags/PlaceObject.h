@@ -11,36 +11,13 @@
 #define __PlaceObject_h__
 
 #include "mkTag.h"
+#include "mkMovieClip.h"
 #include <string>
 
 namespace MonkSWF {
 
-	class MovieClip {
-	public:
-		MovieClip( const FrameList& frames );
-
-        void clearDisplayList(void);
-
-		uint32_t getFrame( void ) { return _frame; }
-		void gotoFrame( uint32_t frame );
-        void setupFrame(const TagList& tags);
-
-        void play( bool enable ) { _play = enable; }
-        void update(void);
-		void draw( SWF* swf );
-
-        DisplayList& getDisplayList(void) { return _display_list; }
-
-	private:
-		const FrameList &_frame_list;
-		const uint32_t	_frame_count;
-		uint32_t		_frame;
-        bool            _play;
-		DisplayList		_display_list;
-	};
-
-//=========================================================================
     class DefineShapeTag;
+
 	class PlaceObjectTag : public ITag
     {
 	public:
@@ -53,7 +30,7 @@ namespace MonkSWF {
 		    ,_has_character( 0 )
 		    ,_has_move( 0 )
             ,_pShape(NULL)
-			,_pMovieClip(NULL)
+            ,_pMovie(NULL)
 			,_name( "none" )
 		{
 		}
@@ -62,23 +39,21 @@ namespace MonkSWF {
 		{
 		}
 
-        virtual bool process(SWF* swf ) { return true; }
-
-        virtual void setup(MovieClip&);
-
-		virtual bool read( Reader* reader, SWF* );
+		virtual bool read( Reader& reader, SWF&, MovieFrames& );
 
 		virtual void print();
 
-		virtual void draw( SWF* swf );
+        virtual void setup(MovieClip&);
+
+		void draw(void);
 
 		void copyCharacter( PlaceObjectTag* other )
         {
             _character_id = other->_character_id;
             _depth = other->_depth;
             _clipDepth = other->_clipDepth;
-		    _pShape = other->_pShape;
-		    _pMovieClip = other->_pMovieClip;
+		    _pMovie = other->_pMovie;
+            _pShape = other->_pShape;
         }
 
 		void copyTransform( PlaceObjectTag* other )
@@ -88,31 +63,31 @@ namespace MonkSWF {
 
 		void update(void)
 		{
-			if (_pMovieClip)
-				_pMovieClip->update();
+			if (_pMovie)
+				_pMovie->update();
 		}
 
         void play(bool enable) 
         {
-			if (_pMovieClip)
-				_pMovieClip->play(enable);
+			if (_pMovie)
+				_pMovie->play(enable);
 		}
 
 		void gotoFrame(uint32_t frame)
 		{
-			if (_pMovieClip)
-				_pMovieClip->gotoFrame( frame );
+			if (_pMovie)
+				_pMovie->gotoFrame( frame );
 		}
 
-		uint16_t depth() const { return _depth; }
-        uint16_t clipDepth() const { return _clipDepth; }
-		uint16_t characterId() const { return _character_id; }
-		bool hasCharacter() const { return 0!=_has_character; }
-		bool hasMatrix() const { return 0!=_has_matrix; }
-		bool hasMove() const { return 0!=_has_move; }
+		uint16_t depth()        const { return _depth; }
+        uint16_t clipDepth()    const { return _clipDepth; }
+		uint16_t characterId()  const { return _character_id; }
+		bool hasCharacter()     const { return 0!=_has_character; }
+		bool hasMatrix()        const { return 0!=_has_matrix; }
+		bool hasMove()          const { return 0!=_has_move; }
 
-		static ITag* create( TagHeader* header ) {
-			return (ITag*)(new PlaceObjectTag( *header ));
+		static ITag* create( TagHeader& header ) {
+			return (ITag*)(new PlaceObjectTag( header ));
 		}
 
 	private:
@@ -124,10 +99,10 @@ namespace MonkSWF {
 		uint8_t		_has_move;
 
         DefineShapeTag  *_pShape;
-		MovieClip		*_pMovieClip;
-		std::string		_name;
+        MovieClip       *_pMovie;
         MATRIX          _transform;
         CXFORM          _cxform;
+		std::string     _name;
 	};
 }
 #endif // __PlaceObject_h__

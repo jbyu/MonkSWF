@@ -12,7 +12,7 @@
 
 #include "mkCommon.h"
 #include "mkTypes.h"
-#include <string.h>
+#include <string>
 
 namespace MonkSWF {
 	

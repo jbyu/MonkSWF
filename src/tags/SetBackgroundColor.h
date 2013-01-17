@@ -16,20 +16,17 @@ namespace MonkSWF
 		virtual ~SetBackgroundColorTag()
         {}
 		
-        virtual bool process(SWF* swf ) {
-            COLOR4f &color = swf->getBackgroundColor();
+		virtual bool read( Reader& reader, SWF& swf, MovieFrames& ) {
+			r = reader.get<uint8_t>();
+			g = reader.get<uint8_t>();
+			b = reader.get<uint8_t>();
+
+            COLOR4f &color = swf.getBackgroundColor();
             color.r = r * SWF_INV_COLOR;
             color.g = g * SWF_INV_COLOR;
             color.b = b * SWF_INV_COLOR;
             color.a = 1.f;
-            return false;
-        }
-
-		virtual bool read( Reader* reader, SWF* ) {
-			r = reader->get<uint8_t>();
-			g = reader->get<uint8_t>();
-			b = reader->get<uint8_t>();
-			return true;
+			return false; // delete tag
 		}
 		
 		virtual void print() {
@@ -37,8 +34,8 @@ namespace MonkSWF
 			MK_TRACE("color:%d,%d,%d\n", r,g,b);
 		}
 		
-		static ITag* create( TagHeader* header ) {
-			return (ITag*)(new SetBackgroundColorTag( *header ));
+		static ITag* create( TagHeader& header ) {
+			return (ITag*)(new SetBackgroundColorTag( header ));
 		}				
 	};
 }	

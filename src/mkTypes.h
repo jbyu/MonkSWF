@@ -63,6 +63,12 @@ namespace MonkSWF {
 		float        r0, sy, ty;
 	};
 
+    const MATRIX kMatrixIdentity =
+    {
+        1,0,0,
+        0,1,0
+    };
+
     struct MATRIX3f
     {
         float* operator [] ( const int Row )
@@ -71,6 +77,39 @@ namespace MonkSWF {
 	    }
 	    float f[9];	/*!< Array of float */
     };
+
+    inline void MATRIX3fSet(MATRIX3f &mOut, const MATRIX& mIn)
+    {
+        mOut.f[0] = mIn.sx;
+        mOut.f[4] = mIn.sy;
+        mOut.f[1] = mIn.r0;
+        mOut.f[3] = mIn.r1;
+        mOut.f[6] = mIn.tx;
+        mOut.f[7] = mIn.ty;
+        mOut.f[2] = 0;
+        mOut.f[5] = 0;
+        mOut.f[8] = 1;
+    }
+
+    inline void MATRIX3fMultiply(
+	    MATRIX3f		&mOut,
+	    const MATRIX3f	&mA,
+	    const MATRIX3f	&mB)
+    {
+	    MATRIX3f mRet;
+	    mRet.f[0] = mA.f[0]*mB.f[0] + mA.f[1]*mB.f[3] + mA.f[2]*mB.f[6];
+	    mRet.f[1] = mA.f[0]*mB.f[1] + mA.f[1]*mB.f[4] + mA.f[2]*mB.f[7];
+	    mRet.f[2] = mA.f[0]*mB.f[2] + mA.f[1]*mB.f[5] + mA.f[2]*mB.f[8];
+
+	    mRet.f[3] = mA.f[3]*mB.f[0] + mA.f[4]*mB.f[3] + mA.f[5]*mB.f[6];
+	    mRet.f[4] = mA.f[3]*mB.f[1] + mA.f[4]*mB.f[4] + mA.f[5]*mB.f[7];
+	    mRet.f[5] = mA.f[3]*mB.f[2] + mA.f[4]*mB.f[5] + mA.f[5]*mB.f[8];
+
+	    mRet.f[6] = mA.f[6]*mB.f[0] + mA.f[7]*mB.f[3] + mA.f[8]*mB.f[6];
+	    mRet.f[7] = mA.f[6]*mB.f[1] + mA.f[7]*mB.f[4] + mA.f[8]*mB.f[7];
+	    mRet.f[8] = mA.f[6]*mB.f[2] + mA.f[7]*mB.f[5] + mA.f[8]*mB.f[8];
+	    mOut = mRet;
+    }
 
 	typedef struct _CXFORM
     {

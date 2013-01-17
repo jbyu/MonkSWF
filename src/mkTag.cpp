@@ -87,13 +87,13 @@ namespace MonkSWF {
     const int kTagInitialize = TagHeader::initialize();
 #endif
 
-	bool TagHeader::read( Reader* reader ) {
-		uint16_t tagcode_and_length = reader->get<uint16_t>();
+	bool TagHeader::read( Reader& reader ) {
+		uint16_t tagcode_and_length = reader.get<uint16_t>();
 		
 		_code = (tagcode_and_length >> 6 );
 		_length = (tagcode_and_length & 0x3F );
 		if( _length == 0x3f )	// if long tag read an additional 32 bit length value
-			_length = reader->get<uint32_t>();
+			_length = reader.get<uint32_t>();
 				
 		return true;
 	}

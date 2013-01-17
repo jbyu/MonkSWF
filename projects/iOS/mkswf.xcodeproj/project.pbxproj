@@ -1,0 +1,332 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D7B7467016563ADE0039C7E7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7B7466F16563ADE0039C7E7 /* Foundation.framework */; };
+		D7B746A016563B140039C7E7 /* mkHeader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7468216563B140039C7E7 /* mkHeader.cpp */; };
+		D7B746A116563B140039C7E7 /* mkMovieClip.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7468416563B140039C7E7 /* mkMovieClip.cpp */; };
+		D7B746A216563B140039C7E7 /* mkReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7468616563B140039C7E7 /* mkReader.cpp */; };
+		D7B746A316563B140039C7E7 /* mkSWF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7468816563B140039C7E7 /* mkSWF.cpp */; };
+		D7B746A416563B140039C7E7 /* mkTag.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7468A16563B140039C7E7 /* mkTag.cpp */; };
+		D7B746A516563B140039C7E7 /* DefineShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7468F16563B140039C7E7 /* DefineShape.cpp */; };
+		D7B746A616563B140039C7E7 /* DefineSprite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7469216563B140039C7E7 /* DefineSprite.cpp */; };
+		D7B746A716563B140039C7E7 /* DoAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7469416563B140039C7E7 /* DoAction.cpp */; };
+		D7B746A816563B140039C7E7 /* PlaceObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7469916563B140039C7E7 /* PlaceObject.cpp */; };
+		D7B746A916563B140039C7E7 /* RemoveObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7469B16563B140039C7E7 /* RemoveObject.cpp */; };
+		D7B746AA16563B140039C7E7 /* ShowFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B7469E16563B140039C7E7 /* ShowFrame.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D7B7466A16563ADE0039C7E7 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/${PRODUCT_NAME}";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		D7B7466C16563ADE0039C7E7 /* libmkswf.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmkswf.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7B7466F16563ADE0039C7E7 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D7B7467316563ADE0039C7E7 /* mkswf-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "mkswf-Prefix.pch"; sourceTree = "<group>"; };
+		D7B7468116563B140039C7E7 /* mkCommon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkCommon.h; sourceTree = "<group>"; };
+		D7B7468216563B140039C7E7 /* mkHeader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mkHeader.cpp; sourceTree = "<group>"; };
+		D7B7468316563B140039C7E7 /* mkHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkHeader.h; sourceTree = "<group>"; };
+		D7B7468416563B140039C7E7 /* mkMovieClip.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mkMovieClip.cpp; sourceTree = "<group>"; };
+		D7B7468516563B140039C7E7 /* mkMovieClip.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkMovieClip.h; sourceTree = "<group>"; };
+		D7B7468616563B140039C7E7 /* mkReader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mkReader.cpp; sourceTree = "<group>"; };
+		D7B7468716563B140039C7E7 /* mkReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkReader.h; sourceTree = "<group>"; };
+		D7B7468816563B140039C7E7 /* mkSWF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mkSWF.cpp; sourceTree = "<group>"; };
+		D7B7468916563B140039C7E7 /* mkSWF.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkSWF.h; sourceTree = "<group>"; };
+		D7B7468A16563B140039C7E7 /* mkTag.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mkTag.cpp; sourceTree = "<group>"; };
+		D7B7468B16563B140039C7E7 /* mkTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkTag.h; sourceTree = "<group>"; };
+		D7B7468C16563B140039C7E7 /* mkTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mkTypes.h; sourceTree = "<group>"; };
+		D7B7468D16563B140039C7E7 /* openvg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = openvg.h; sourceTree = "<group>"; };
+		D7B7468F16563B140039C7E7 /* DefineShape.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DefineShape.cpp; sourceTree = "<group>"; };
+		D7B7469016563B140039C7E7 /* DefineShape.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DefineShape.h; sourceTree = "<group>"; };
+		D7B7469116563B140039C7E7 /* DefineSound.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DefineSound.h; sourceTree = "<group>"; };
+		D7B7469216563B140039C7E7 /* DefineSprite.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DefineSprite.cpp; sourceTree = "<group>"; };
+		D7B7469316563B140039C7E7 /* DefineSprite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DefineSprite.h; sourceTree = "<group>"; };
+		D7B7469416563B140039C7E7 /* DoAction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DoAction.cpp; sourceTree = "<group>"; };
+		D7B7469516563B140039C7E7 /* DoAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DoAction.h; sourceTree = "<group>"; };
+		D7B7469616563B140039C7E7 /* ExportAssets.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExportAssets.h; sourceTree = "<group>"; };
+		D7B7469716563B140039C7E7 /* FrameLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FrameLabel.h; sourceTree = "<group>"; };
+		D7B7469816563B140039C7E7 /* ImportAssets2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImportAssets2.h; sourceTree = "<group>"; };
+		D7B7469916563B140039C7E7 /* PlaceObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlaceObject.cpp; sourceTree = "<group>"; };
+		D7B7469A16563B140039C7E7 /* PlaceObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlaceObject.h; sourceTree = "<group>"; };
+		D7B7469B16563B140039C7E7 /* RemoveObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RemoveObject.cpp; sourceTree = "<group>"; };
+		D7B7469C16563B140039C7E7 /* RemoveObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RemoveObject.h; sourceTree = "<group>"; };
+		D7B7469D16563B140039C7E7 /* SetBackgroundColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SetBackgroundColor.h; sourceTree = "<group>"; };
+		D7B7469E16563B140039C7E7 /* ShowFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShowFrame.cpp; sourceTree = "<group>"; };
+		D7B7469F16563B140039C7E7 /* ShowFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShowFrame.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D7B7466916563ADE0039C7E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7B7467016563ADE0039C7E7 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D7B7466116563ADE0039C7E7 = {
+			isa = PBXGroup;
+			children = (
+				D7B7468016563B140039C7E7 /* src */,
+				D7B7467116563ADE0039C7E7 /* mkswf */,
+				D7B7466E16563ADE0039C7E7 /* Frameworks */,
+				D7B7466D16563ADE0039C7E7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D7B7466D16563ADE0039C7E7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D7B7466C16563ADE0039C7E7 /* libmkswf.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D7B7466E16563ADE0039C7E7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D7B7466F16563ADE0039C7E7 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D7B7467116563ADE0039C7E7 /* mkswf */ = {
+			isa = PBXGroup;
+			children = (
+				D7B7467216563ADE0039C7E7 /* Supporting Files */,
+			);
+			path = mkswf;
+			sourceTree = "<group>";
+		};
+		D7B7467216563ADE0039C7E7 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D7B7467316563ADE0039C7E7 /* mkswf-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D7B7468016563B140039C7E7 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				D7B7468116563B140039C7E7 /* mkCommon.h */,
+				D7B7468216563B140039C7E7 /* mkHeader.cpp */,
+				D7B7468316563B140039C7E7 /* mkHeader.h */,
+				D7B7468416563B140039C7E7 /* mkMovieClip.cpp */,
+				D7B7468516563B140039C7E7 /* mkMovieClip.h */,
+				D7B7468616563B140039C7E7 /* mkReader.cpp */,
+				D7B7468716563B140039C7E7 /* mkReader.h */,
+				D7B7468816563B140039C7E7 /* mkSWF.cpp */,
+				D7B7468916563B140039C7E7 /* mkSWF.h */,
+				D7B7468A16563B140039C7E7 /* mkTag.cpp */,
+				D7B7468B16563B140039C7E7 /* mkTag.h */,
+				D7B7468C16563B140039C7E7 /* mkTypes.h */,
+				D7B7468D16563B140039C7E7 /* openvg.h */,
+				D7B7468E16563B140039C7E7 /* tags */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+		D7B7468E16563B140039C7E7 /* tags */ = {
+			isa = PBXGroup;
+			children = (
+				D7B7468F16563B140039C7E7 /* DefineShape.cpp */,
+				D7B7469016563B140039C7E7 /* DefineShape.h */,
+				D7B7469116563B140039C7E7 /* DefineSound.h */,
+				D7B7469216563B140039C7E7 /* DefineSprite.cpp */,
+				D7B7469316563B140039C7E7 /* DefineSprite.h */,
+				D7B7469416563B140039C7E7 /* DoAction.cpp */,
+				D7B7469516563B140039C7E7 /* DoAction.h */,
+				D7B7469616563B140039C7E7 /* ExportAssets.h */,
+				D7B7469716563B140039C7E7 /* FrameLabel.h */,
+				D7B7469816563B140039C7E7 /* ImportAssets2.h */,
+				D7B7469916563B140039C7E7 /* PlaceObject.cpp */,
+				D7B7469A16563B140039C7E7 /* PlaceObject.h */,
+				D7B7469B16563B140039C7E7 /* RemoveObject.cpp */,
+				D7B7469C16563B140039C7E7 /* RemoveObject.h */,
+				D7B7469D16563B140039C7E7 /* SetBackgroundColor.h */,
+				D7B7469E16563B140039C7E7 /* ShowFrame.cpp */,
+				D7B7469F16563B140039C7E7 /* ShowFrame.h */,
+			);
+			path = tags;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D7B7466B16563ADE0039C7E7 /* mkswf */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D7B7467A16563ADE0039C7E7 /* Build configuration list for PBXNativeTarget "mkswf" */;
+			buildPhases = (
+				D7B7466816563ADE0039C7E7 /* Sources */,
+				D7B7466916563ADE0039C7E7 /* Frameworks */,
+				D7B7466A16563ADE0039C7E7 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = mkswf;
+			productName = mkswf;
+			productReference = D7B7466C16563ADE0039C7E7 /* libmkswf.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D7B7466316563ADE0039C7E7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0450;
+				ORGANIZATIONNAME = nubee;
+			};
+			buildConfigurationList = D7B7466616563ADE0039C7E7 /* Build configuration list for PBXProject "mkswf" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D7B7466116563ADE0039C7E7;
+			productRefGroup = D7B7466D16563ADE0039C7E7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D7B7466B16563ADE0039C7E7 /* mkswf */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D7B7466816563ADE0039C7E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7B746A016563B140039C7E7 /* mkHeader.cpp in Sources */,
+				D7B746A116563B140039C7E7 /* mkMovieClip.cpp in Sources */,
+				D7B746A216563B140039C7E7 /* mkReader.cpp in Sources */,
+				D7B746A316563B140039C7E7 /* mkSWF.cpp in Sources */,
+				D7B746A416563B140039C7E7 /* mkTag.cpp in Sources */,
+				D7B746A516563B140039C7E7 /* DefineShape.cpp in Sources */,
+				D7B746A616563B140039C7E7 /* DefineSprite.cpp in Sources */,
+				D7B746A716563B140039C7E7 /* DoAction.cpp in Sources */,
+				D7B746A816563B140039C7E7 /* PlaceObject.cpp in Sources */,
+				D7B746A916563B140039C7E7 /* RemoveObject.cpp in Sources */,
+				D7B746AA16563B140039C7E7 /* ShowFrame.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D7B7467816563ADE0039C7E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				SDKROOT = iphoneos6.0;
+			};
+			name = Debug;
+		};
+		D7B7467916563ADE0039C7E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				SDKROOT = iphoneos6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D7B7467B16563ADE0039C7E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DSTROOT = /tmp/mkswf.dst;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "mkswf/mkswf-Prefix.pch";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		D7B7467C16563ADE0039C7E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DSTROOT = /tmp/mkswf.dst;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "mkswf/mkswf-Prefix.pch";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D7B7466616563ADE0039C7E7 /* Build configuration list for PBXProject "mkswf" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D7B7467816563ADE0039C7E7 /* Debug */,
+				D7B7467916563ADE0039C7E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D7B7467A16563ADE0039C7E7 /* Build configuration list for PBXNativeTarget "mkswf" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D7B7467B16563ADE0039C7E7 /* Debug */,
+				D7B7467C16563ADE0039C7E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D7B7466316563ADE0039C7E7 /* Project object */;
+}

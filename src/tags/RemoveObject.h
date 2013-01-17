@@ -11,6 +11,8 @@
 #define __RemoveObject_h__
 
 #include "mkTag.h"
+#include "mkMovieClip.h"
+#include "PlaceObject.h"
 
 namespace MonkSWF {
 	class RemoveObjectTag : public ITag {
@@ -33,8 +35,6 @@ namespace MonkSWF {
 			return _depth;
 		}
 
-        virtual bool process(SWF* swf ) { return true; }
-
         virtual void setup(MovieClip &movie)
         {
             DisplayList& _display_list = movie.getDisplayList();
@@ -45,14 +45,14 @@ namespace MonkSWF {
             _display_list[ depth ] = NULL;
         }
 
-		virtual bool read( Reader* reader, SWF* ) {
+		virtual bool read( Reader& reader, SWF&, MovieFrames& ) {
 			if ( code() == TAG_REMOVE_OBJECT )
             {
-				_character_id = reader->get<uint16_t>();
+				_character_id = reader.get<uint16_t>();
             }	
-			_depth = reader->get<uint16_t>();
+			_depth = reader.get<uint16_t>();
 		
-			return true;
+			return true; // keep tag
 		}
 		
 		virtual void print() {
@@ -62,8 +62,8 @@ namespace MonkSWF {
 				MK_TRACE("REMOVEOBJECT2 depth=%d\n", _depth);
 		}
 		
-		static ITag* create( TagHeader* header ) {
-			return (ITag*)(new RemoveObjectTag( *header ));
+		static ITag* create( TagHeader& header ) {
+			return (ITag*)(new RemoveObjectTag( header ));
 		}				
 	};
 	
