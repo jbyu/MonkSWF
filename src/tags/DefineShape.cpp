@@ -68,8 +68,6 @@ namespace MonkSWF {
 		virtual void print() = 0;
 		virtual IEdge* copy( ) = 0;
 		
-		
-		
 		bool canConnectToEnd( IEdge* e ) {
 			VGfloat *end = this->getEndPoint();
 			VGfloat *start = e->getStartPoint();
@@ -1151,7 +1149,7 @@ namespace MonkSWF {
     {
         int32_t start = reader.getCurrentPos();
 		_shape_id = reader.get<uint16_t>();
-		reader.getRectangle( _bounds );
+		reader.getRectangle( _bound );
 		
 		_shape_with_style.read( reader, this );
 
@@ -1171,20 +1169,30 @@ namespace MonkSWF {
 	
 	void DefineShapeTag::print() {
 		_header.print();
-		MK_TRACE("id=%d, w=%f, h=%f\n", _shape_id, _bounds.xmax-_bounds.xmin, _bounds.ymax-_bounds.ymin);
+		//MK_TRACE("id=%d, w=%f, h=%f\n", _shape_id, _bound.xmax-_bound.xmin, _bound.ymax-_bound.ymin);
+		MK_TRACE("id=%d, RECT:{%.2f,%.2f,%.2f,%.2f}\n", _shape_id,
+			_bound.xmin, _bound.ymin,
+			_bound.xmax, _bound.ymax);
 	}
 	
-	void DefineShapeTag::draw(const CXFORM& cxform) {
+	void DefineShapeTag::draw(void) {
         if (_asset.import)
         {
-            Renderer::getRenderer()->drawImportAsset(_bounds, cxform, _asset.handle);
+			Renderer::getRenderer()->drawImportAsset(_bound, SWF::getCurrentCXForm(), _asset.handle);
             return;
         }
-        Renderer::getRenderer()->drawQuad(_bounds, cxform, _asset.handle);
+        Renderer::getRenderer()->drawQuad(_bound, SWF::getCurrentCXForm(), _asset.handle);
 	}
 	
 	ITag* DefineShapeTag::create( TagHeader& header ) {
 		return (ITag*)(new DefineShapeTag( header ));
+	}
+
+	ICharacter* DefineShapeTag::getTopMost(float localX, float localY) {
+		if ( IsWithinRectangle(getRectangle(), localX, localY) ) {
+			return this;
+		}
+		return NULL;
 	}
 	
 }

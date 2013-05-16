@@ -84,6 +84,7 @@ namespace MonkSWF {
 	    TAG_DEFINE_FONT4            = 91,
     } SWF_TAG_NAMES;
 
+	// forward declaration
 	class SWF;
 	class ITag;
 	class PlaceObjectTag;
@@ -94,6 +95,7 @@ namespace MonkSWF {
 	typedef std::vector<ITag*>					TagList;
 	typedef std::vector<TagList*>				FrameList;
 
+	// movieclip information
     struct MovieFrames
     {
         FrameList _frames;
@@ -101,15 +103,78 @@ namespace MonkSWF {
         RECT      _rectangle;
     };
 
+	// import asset
     struct Asset
     {
         bool        import;
         uint32_t    handle;
 		int			typeId;
     };
-    const Asset kNULL_ASSET = {false,0};
+    const Asset kNULL_ASSET = {false, 0};
+
+
+	struct Event {
+		enum Code {
+			INVALID = 0,
+
+			// These are for buttons & sprites.
+			PRESS,
+			RELEASE,
+			RELEASE_OUTSIDE,
+			ROLL_OVER,
+			ROLL_OUT,
+			DRAG_OVER,
+			DRAG_OUT,
+			KEY_PRESS,
+
+			// These are for sprites only.
+			INITIALIZE,
+			LOAD,
+			UNLOAD,
+			ENTER_FRAME,
+			MOUSE_DOWN,
+			MOUSE_UP,
+			MOUSE_MOVE,
+			KEY_DOWN,
+			KEY_UP,
+			DATA,
+
+			CONSTRUCT,
+			SETFOCUS,
+			KILLFOCUS,			
+
+			// MovieClipLoader events
+			ONLOAD_COMPLETE,
+			ONLOAD_ERROR,
+			ONLOAD_INIT,
+			ONLOAD_PROGRESS,
+			ONLOAD_START,
+
+			// sound
+			ON_SOUND_COMPLETE,
+
+			EVENT_COUNT
+		};
+		unsigned char	m_id;
+		unsigned char	m_key_code;
+	};
+
+	// character interface for display list
+	class ICharacter {
+	public:
+		const static uint32_t kFRAME_MAXIMUM = 0xffffffff;
+
+        virtual const RECT& getRectangle(void) const = 0;
+		virtual void draw(void) = 0;
+		virtual void update(void) = 0;
+        virtual void play( bool enable ) = 0;
+		virtual void gotoFrame( uint32_t frame ) = 0;
+		virtual ICharacter* getTopMost(float localX, float localY) = 0;
+		virtual void onEvent(Event::Code) {}
+	};
 
 //=========================================================================
+
 	class TagHeader {
 	public:
 		inline uint32_t code() const { return _code; }
@@ -132,6 +197,7 @@ namespace MonkSWF {
 	};
 
 //=========================================================================
+
 	class ITag {
 	public:
         // return false to delete this tag
@@ -155,6 +221,7 @@ namespace MonkSWF {
 	};
 
 //=========================================================================
+
 	class EndTag : public ITag {
 	public:
 		EndTag( TagHeader& header )
@@ -170,6 +237,8 @@ namespace MonkSWF {
 			return (ITag*)(new EndTag(header));
 		}				
 	};
+
+//=========================================================================
 
 }
 #endif // __mkTag_h__

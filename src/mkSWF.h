@@ -40,6 +40,8 @@ namespace MonkSWF {
         virtual void drawBegin(void) = 0;
         virtual void drawEnd(void) = 0;
 
+        virtual void createTempTexAssets(void) = 0;
+        virtual void destroyTempTexAssets(void) = 0;
         virtual void maskBegin(void) = 0;
         virtual void maskEnd(void) = 0;
         virtual void maskOffBegin(void) = 0;
@@ -70,18 +72,22 @@ namespace MonkSWF {
 //=========================================================================
 	class SWF : public MovieClip
     {
+/*
         friend class PlaceObjectTag;
-        MovieClip *createMovieClip(const ITag &tag);
-
+		virtual void clearDisplayList(void) {
+			MovieClip::clearDisplayList();
+			_mouseButtonStateLast = 0;
+			_mouseInsideEntityLast = false;
+			_pActiveEntity = NULL;
+		}
+*/
     public:
         // factory function prototype
 		typedef ITag* (*TagFactoryFunc)( TagHeader& );
         typedef uint32_t (*LoadAssetCallback)( const char *name, bool import );
-        typedef void (*GetURLCallback)( MovieClip& );
+        typedef void (*GetURLCallback)( MovieClip&, bool isFSCommand, const char *command, const char *target );
 
 		static bool initialize(LoadAssetCallback);
-
-		static void addFactory( uint32_t tag_code, TagFactoryFunc factory ) { _tag_factories[ tag_code ] = factory;	}
 
 		static TagFactoryFunc getTagFactory( uint32_t tag_code ) {
 			TagFactoryMap::iterator factory = _tag_factories.find( tag_code );
@@ -90,8 +96,12 @@ namespace MonkSWF {
 			return NULL;
 		}
 
+	private:
+		static void addFactory( uint32_t tag_code, TagFactoryFunc factory ) { _tag_factories[ tag_code ] = factory;	}
+
+    public:
         SWF(); 
-        ~SWF();
+        virtual ~SWF();
 
 		bool read( Reader &reader );
 		void print();
@@ -105,46 +115,65 @@ namespace MonkSWF {
 			return it->second;
 		}
 		
+		// duplicate movieclip for other purpose outside flash
         MovieClip *duplicate(const char *name);
+		// update all duplicated movieclips
         void updateDuplicate(float delta);
+		// draw all duplicated movieclips
         void drawDuplicate(void);
-
-        void update(float delta);
-        void draw(void);
 
 		static void drawMovieClip(MovieClip *movie, float alpha=1.f);
 
+		static MATRIX3f& getCurrentMatrix(void) { return _sCurrentMatrix; }
+
+		static CXFORM& getCurrentCXForm(void) { return _sCurrentCXForm; }
+
+		// animate flash
+        void update(float delta);
+        void draw(void);
+
+		// button: 0 for up, 1 for down
+		void notifyMouse(int button, int x, int y);
+
+		// flash information
 		float getFrameWidth() const     { return _header.getFrameWidth(); }
 		float getFrameHeight() const    { return _header.getFrameHeight(); }
 		float getFrameRate() const      { return _header.getFrameRate(); }
 
         COLOR4f& getBackgroundColor(void) { return _bgColor; }
 
-        const Asset& getAsset(uint16_t id) const
-        {
+		// handle export/import assets
+        bool addAsset(uint16_t id, const char *name, bool import);
+        const Asset& getAsset(uint16_t id) const  {
             AssetDictionary::const_iterator it = moAssets.find(id);
             if (moAssets.end() != it)
                 return it->second;
             return kNULL_ASSET;
         }
-        
-        bool addAsset(uint16_t id, const char *name, bool import);
-
+       
+		// handle GetURL function (include fscommand)
         void setGetURL(GetURLCallback cb) { _getURL = cb; }
         GetURLCallback getGetURL(void) { return _getURL; }
+
+		RECT calculateRectangle(uint16_t character, const MATRIX* xf);
 
     private:
 		typedef std::map< uint32_t, TagFactoryFunc >    TagFactoryMap;
 		typedef std::map< uint16_t, ITag* >             CharacterDictionary;
         typedef std::map< uint16_t, Asset >             AssetDictionary;
         typedef std::map< std::string, uint16_t >       SymbolDictionary;
-		typedef std::vector< MovieClip* >               MovieList;
+
+		int		_mouseX, _mouseY;
+		int		_mouseButtonStateCurr;
+		int		_mouseButtonStateLast;
+		bool	_mouseInsideEntityLast;
+		ICharacter *_pActiveEntity;
 
 		float               _elapsedAccumulator;
 		float               _elapsedAccumulatorDuplicate;
 		MovieFrames 	    _swf_data;
-		MovieList			_movie_list;
-        MovieList           _duplicates;
+
+		MovieClipArray      _duplicates;
 		Header				_header;
     	CharacterDictionary	_dictionary;
         SymbolDictionary    _library;
@@ -155,6 +184,8 @@ namespace MonkSWF {
 
 		static TagFactoryMap            _tag_factories;
         static LoadAssetCallback        _asset_loader;
+		static MATRIX3f					_sCurrentMatrix;
+		static CXFORM					_sCurrentCXForm;
 	};
 }
 #endif // __mkSWF_h__

@@ -11,7 +11,6 @@
 #define __DefineShape_h__
 
 #include "mkTag.h"
-#include "mkMovieClip.h"
 
 typedef float          VGfloat;
 typedef signed char    VGbyte;
@@ -210,7 +209,7 @@ namespace MonkSWF {
 	};
 	
 //=========================================================================
-	class DefineShapeTag : public ITag {
+	class DefineShapeTag : public ITag, public ICharacter {
 	public:
 		DefineShapeTag( TagHeader& h )
 			:ITag( h )
@@ -227,15 +226,20 @@ namespace MonkSWF {
 		virtual bool read( Reader& reader, SWF&, MovieFrames& data );
 		virtual void print();
 		
-		void draw( const CXFORM& );
-        const RECT& getRectangle(void) const { return _bounds;}
+		// override ICharacter function
+        virtual const RECT& getRectangle(void) const { return _bound; }
+		virtual void draw(void);
+		virtual void update(void) {}
+        virtual void play( bool enable ) {}
+		virtual void gotoFrame( uint32_t frame ) {}
+		virtual ICharacter* getTopMost(float localX, float localY);
 		
 		static ITag* create( TagHeader& header );
 		
-	private:
+	protected:
 		uint16_t		_shape_id;
         Asset           _asset;
-		RECT			_bounds;
+		RECT			_bound;
 		ShapeWithStyle	_shape_with_style;
     };
 	

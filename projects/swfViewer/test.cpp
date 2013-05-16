@@ -7,6 +7,7 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
+#include "vld.h"
 #endif//_DEBUG
 
 #include <stdint.h>
@@ -121,6 +122,9 @@ public:
             ++it;
         }
     }
+
+	virtual void createTempTexAssets(void) {}
+	virtual void destroyTempTexAssets(void) {}
     
 	void maskBegin(void)
 	{
@@ -262,7 +266,7 @@ public:
 #endif
     }
 
-    void drawImportAsset( const MonkSWF::RECT& rect, unsigned int handle )
+    void drawImportAsset( const MonkSWF::RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle )
     {
         glDisable(GL_TEXTURE_2D);
         glBegin(GL_QUADS);
@@ -434,7 +438,7 @@ void keyboard(unsigned char key, int x, int y)
     case 's':
         if (gpSWF) 
         {
-            gpSWF->gotoFrame(0);
+            gpSWF->gotoFrame(0xffffffff);
             gpSWF->play(true);
         }
         break;
@@ -457,6 +461,25 @@ void keyboard(unsigned char key, int x, int y)
 	}
 }
 
+static int siLastButtonStatus = 0;
+
+void motionCB( int x, int y) {
+	if (gpSWF) {
+		gpSWF->notifyMouse(siLastButtonStatus, x, y);
+		//gpSWF->notifyMouse(siLastButtonStatus, 100, 200);
+	}
+}
+
+void mouseCB(int button,int stat,int x,int y) {
+	siLastButtonStatus = (GLUT_DOWN == stat)?1:0;
+	motionCB(x,y);
+}
+
+void myURLCallback( MonkSWF::MovieClip&, bool isFSCommand, const char *url, const char *target )
+{
+	printf("fs:%d, url:%s, targt:%s\n", isFSCommand, url, target);
+}
+
 int _tmain(int argc, char* argv[])
 {
     _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); 
@@ -477,6 +500,8 @@ int _tmain(int argc, char* argv[])
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
+	glutMouseFunc( mouseCB );
+	glutPassiveMotionFunc( motionCB );
 	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -519,13 +544,14 @@ int _tmain(int argc, char* argv[])
     gpSWF = new MonkSWF::SWF;
     bool ret = gpSWF->read(reader);
     delete [] pBuffer;
+	gpSWF->setGetURL( myURLCallback );
 
     if (ret) {
         width = (int)gpSWF->getFrameWidth();
         height = (int)gpSWF->getFrameHeight();
         glutReshapeWindow(width,height);
 
-        MonkSWF::MovieClip * clip = gpSWF->duplicate("maleA");
+        MonkSWF::MovieClip * clip = gpSWF->duplicate("npc_animalA");
         if (clip)
         {
             const MonkSWF::RECT& rect = clip->getRectangle();

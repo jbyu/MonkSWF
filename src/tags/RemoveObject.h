@@ -39,10 +39,15 @@ namespace MonkSWF {
         {
             DisplayList& _display_list = movie.getDisplayList();
 		    const uint16_t depth = this->depth();
-            PlaceObjectTag* current_obj = _display_list[ depth ];
+			DisplayList::iterator it = _display_list.find(depth);
+			if (it == _display_list.end())
+				return;
+
+			PlaceObjectTag* current_obj = it->second;;
             if (current_obj)
-                current_obj->gotoFrame(0xffffffff);
-            _display_list[ depth ] = NULL;
+                current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM);
+            //_display_list[ depth ] = NULL;
+			_display_list.erase(it);
         }
 
 		virtual bool read( Reader& reader, SWF&, MovieFrames& ) {

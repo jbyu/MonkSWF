@@ -18,7 +18,6 @@ namespace MonkSWF {
 	
 	class Reader {
 	public:
-	
 		Reader( char* data, int32_t sz )
 			:	_data( data )
 			,	_sz( sz )
@@ -110,7 +109,32 @@ namespace MonkSWF {
 			color.b = getsignedbits( nbits ) * SWF_INV_CXFORM;
 			color.a = getsignedbits( nbits ) * SWF_INV_CXFORM;
         }
-		
+
+        inline void getRGBA( RGBA& color ) {
+			color.r = get<uint8_t>();
+			color.g = get<uint8_t>();
+			color.b = get<uint8_t>();
+			color.a = get<uint8_t>();
+        }
+
+		inline void getCXForm( CXFORM& cx ) {
+			const uint8_t has_add_terms = getbits( 1 );
+			const uint8_t has_mult_terms = getbits( 1 );
+			const uint8_t nbits = getbits( 4 );
+			if( has_mult_terms ) {
+                getColor( cx.mult, nbits);
+			} else {
+				COLOR4f color = {1.f,1.f,1.f,1.f};
+				cx.mult = color;
+			}
+			if( has_add_terms ) {
+                getColor( cx.add, nbits);
+			} else {
+				COLOR4f color = {0.f,0.f,0.f,0.f};
+				cx.add = color;
+			}
+        }
+
 		inline int32_t getCurrentPos() const {
 			return _cur;
 		}
@@ -148,6 +172,13 @@ namespace MonkSWF {
 			strcpy(dst, src);
 			return( dst );
             */
+		}
+
+		void getFilterList();
+
+		float getFIXED() {
+			int32_t	val = get<int32_t>();
+			return (float) val / 65536.0f;
 		}
 
     private:

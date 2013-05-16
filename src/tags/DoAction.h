@@ -8,29 +8,37 @@ namespace MonkSWF
 //=========================================================================
 	class DoActionTag : public ITag
     {
-        struct ACTION 
-        {
+        struct ACTION {
             uint8_t code;
             uint8_t padding;
             uint16_t data;
+			char	*buffer;
         };
-        typedef std::vector<ACTION> ActionList;
-        ActionList moActions;
+        typedef std::vector<ACTION> ActionArray;
+        ActionArray moActions;
 
 	public:
+		static TagHeader scButtonHeader;
+
 		DoActionTag( TagHeader& h ) 
-		: ITag( h )
+			:ITag( h )
 		{}
-		
-		virtual ~DoActionTag()
-        {}
+
+		DoActionTag( ) 
+			:ITag( scButtonHeader )
+		{}
+
+		virtual ~DoActionTag();
+
+		//restricted copy constructor
+		DoActionTag( DoActionTag& );
 
 		virtual bool read( Reader& reader, SWF& swf, MovieFrames& data);
 
 		virtual void print()
         {
     		_header.print();
-            ActionList::iterator it = moActions.begin();
+            ActionArray::iterator it = moActions.begin();
             while(moActions.end()!=it)
             {
                 MK_TRACE("0x%x,", (*it).code);

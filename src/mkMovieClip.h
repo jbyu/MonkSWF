@@ -8,64 +8,45 @@ namespace MonkSWF {
 
     class Reader;
     class SWF;
+	class Button;
+	class DefineSpriteTag;
+	class DefineButton2Tag;
 
-	class MovieClip {
-        friend class PlaceObjectTag;
+	class MovieClip : public ICharacter {
         friend class SWF;
 
     protected:
-        void setupFrame(const TagList& tags);
-        void clearDisplayList(void);
-		void update(void);
+		void setupFrame(const TagList& tags);
 
-        void createTransform(void)
-        {
+        void clearDisplayList(void);
+
+        void createTransform(void) {
             _transform = new MATRIX;
             *_transform = kMatrixIdentity;
         }
 
+        Button* createButton(DefineButton2Tag &tag);
+        MovieClip* createMovieClip(const DefineSpriteTag &tag);
+
 	public:
-		MovieClip( const MovieFrames& data )
-            :_data(data)
-            ,_owner(NULL)
-            ,_transform(NULL)
-            ,_play(true)
-		    ,_frame(0xffffffff)
-        {}
+		MovieClip( SWF* swf,  const MovieFrames& data );
+        virtual ~MovieClip();
 
-		MovieClip( SWF* swf,  const MovieFrames& data )
-            :_data(data)
-            ,_owner(swf)
-            ,_transform(NULL)
-            ,_play(true)
-		    ,_frame(0xffffffff)
-        {}
-
-        virtual ~MovieClip() { delete _transform; }
+		ICharacter* getInstance(const PlaceObjectTag*);
 
         MATRIX* getTransform(void) { return _transform; }
 
-        void play( bool enable ) { _play = enable; }
+        void gotoLabel( const char* label, bool jump = false );
 
-		void gotoFrame( uint32_t frame );
-
-        void gotoLabel( const char* label, bool jump = false )
-        {
-            LabelList::const_iterator it = _data._labels.find(label);
-            if (_data._labels.end() == it)
-                return;
-            if (jump)
-            {
-                gotoFrame(it->second);
-                return;
-            }
-            while (it->second != _frame)
-            {
-                step();
-            }
-        }
-
+		// override ICharacter function
+        virtual const RECT& getRectangle(void) const { return _data._rectangle; }
 		virtual void draw(void);
+		virtual void update(void);
+        virtual void play( bool enable ) { 
+			_play = enable; 
+		}
+		virtual void gotoFrame( uint32_t frame );
+		virtual ICharacter* getTopMost(float localX, float localY);
 
 		uint32_t getCurrentFrame( void ) const { return _frame; }
         uint32_t getFrameCount( void ) const { return _data._frames.size(); }
@@ -76,14 +57,21 @@ namespace MonkSWF {
 
         DisplayList& getDisplayList(void) { return _display_list; }
 
-        const RECT& getRectangle(void) const { return _data._rectangle; }
-
         SWF* getSWF(void) { return _owner; }
 
         static bool createFrames( Reader& reader, SWF& swf, MovieFrames& );
         static void destroyFrames( MovieFrames& );
+		static bool sbCalculateRectangle;
 
-	private:
+	protected:
+		typedef std::map<const ITag*, ICharacter*>	CharacterCache;
+		typedef std::vector< MovieClip* >			MovieClipArray;
+		typedef std::vector< Button* >				ButtonArray;
+
+		CharacterCache		_characters;
+		MovieClipArray		_movies;
+		ButtonArray			_buttons;
+
 		const MovieFrames   &_data;
         SWF                 *_owner;
         MATRIX              *_transform;

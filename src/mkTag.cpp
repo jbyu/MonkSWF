@@ -101,4 +101,29 @@ namespace MonkSWF {
 	void TagHeader::print() {
 		MK_TRACE("%s\tcode:%2d, length:%d\n", name(), _code , _length);
 	}
+
+
+void MATRIX::transform(RECT& result, const RECT& p) const {
+	POINTf in[4] = {
+		{p.xmin, p.ymin},
+		{p.xmin, p.ymax},
+		{p.xmax, p.ymin},
+		{p.xmax, p.ymax}
+	};
+	RECT rect = {FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX};
+	for (int i = 0; i < 4; ++i) {
+		POINTf other;
+		transform(other, in[i]);
+		if (other.x < rect.xmin)
+			rect.xmin = other.x;
+		else if (other.x > rect.xmax)
+			rect.xmax = other.x;
+		if (other.y < rect.ymin)
+			rect.ymin = other.y;
+		else if (other.y > rect.ymax)
+			rect.ymax = other.y;
+	}
+	result = rect;
 }
+
+}//namespace

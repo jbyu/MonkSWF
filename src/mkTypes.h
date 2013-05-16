@@ -31,7 +31,13 @@ namespace MonkSWF {
 		coord_t        x;
 		coord_t        y;
 	};
-	
+
+	struct POINTf
+	{ 
+		float        x;
+		float        y;
+	};
+
 	struct RGBA
 	{ 
 		uint8_t    a;
@@ -57,17 +63,78 @@ namespace MonkSWF {
 		float        xmax;
 		float        ymax;
 	};
-	
-	struct MATRIX { 
-		float        sx, r1, tx;
-		float        r0, sy, ty;
+
+	inline void MergeRectangle(RECT &rect, const RECT other) {
+		if (other.xmin < rect.xmin)
+			rect.xmin = other.xmin;
+		if (other.xmax > rect.xmax)
+			rect.xmax = other.xmax;
+		if (other.ymin < rect.ymin)
+			rect.ymin = other.ymin;
+		if (other.ymax > rect.ymax)
+			rect.ymax = other.ymax;
+	}
+
+    inline bool IsWithinRectangle(const RECT& rect, float x, float y) {
+		if (x < rect.xmin)
+			return false;
+		if (x > rect.xmax)
+			return false;
+		if (y < rect.ymin)
+			return false;
+		if (y > rect.ymax)
+			return false;
+		return true;
+	}
+		
+	union MATRIX { 
+		struct {
+			float  sx, r1, tx;
+			float  r0, sy, ty;
+		};
+		float m_[2][3];
+
+		void setIdentity() {
+			sx = 1; r1 = tx = 0;
+			sy = 1; r0 = ty = 0;
+		}
+		void setInverse(const MATRIX& m);
+		void transform(POINTf& result, const POINTf& p) const;
+		void transform(RECT& result, const RECT& p) const;
 	};
 
-    const MATRIX kMatrixIdentity =
-    {
+    const MATRIX kMatrixIdentity = {
         1,0,0,
         0,1,0
     };
+
+	// Transform point 'p' by our matrix.  Put the result in result.
+	inline void MATRIX::transform(POINTf& result, const POINTf& p) const {
+		result.x = m_[0][0] * p.x + m_[0][1] * p.y + m_[0][2];
+		result.y = m_[1][0] * p.x + m_[1][1] * p.y + m_[1][2];
+	}
+
+	// Set this matrix to the inverse of the given matrix.
+	inline void MATRIX::setInverse(const MATRIX& m)
+	{
+		// Invert the rotation part.
+		float det = m.m_[0][0] * m.m_[1][1] - m.m_[0][1] * m.m_[1][0];
+		if (det == 0.0f) {
+			// Arbitrary fallback.
+			setIdentity();
+			m_[0][2] = -m.m_[0][2];
+			m_[1][2] = -m.m_[1][2];
+		} else {
+			float	inv_det = 1.0f / det;
+			m_[0][0] = m.m_[1][1] * inv_det;
+			m_[1][1] = m.m_[0][0] * inv_det;
+			m_[0][1] = -m.m_[0][1] * inv_det;
+			m_[1][0] = -m.m_[1][0] * inv_det;
+
+			m_[0][2] = -(m_[0][0] * m.m_[0][2] + m_[0][1] * m.m_[1][2]);
+			m_[1][2] = -(m_[1][0] * m.m_[0][2] + m_[1][1] * m.m_[1][2]);
+		}
+	}
 
     struct MATRIX3f
     {
@@ -123,6 +190,17 @@ namespace MonkSWF {
 		uint8_t* ratios;
 		RGBA* rgba;
 	};
+
+    const CXFORM kCXFormIdentity = {
+        {1,1,1,1},
+        {0,0,0,0}
+    };
+    const MATRIX3f kMatrix3fIdentity = {
+		{1,0,0,
+		 0,1,0,
+		 0,0,1}
+	};
+
 //	
 //	typedef struct _FILTER
 //		{

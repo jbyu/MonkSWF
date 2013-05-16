@@ -1,5 +1,4 @@
 #include "DoAction.h"
-#include "PlaceObject.h"
 #include "mkSWF.h"
 
 namespace MonkSWF
@@ -20,13 +19,24 @@ namespace MonkSWF
         ACTION_GOTO_LABEL       = 0x8C,
     };
 
-    bool DoActionTag::read( Reader& reader, SWF& swf, MovieFrames&) {
+	TagHeader DoActionTag::scButtonHeader;
+
+	DoActionTag::~DoActionTag() {
+		ActionArray::iterator it = moActions.begin();
+		while(moActions.end() != it) {
+			delete [] it->buffer;
+			it->buffer = NULL;
+			++it;
+		}
+	}
+
+    bool DoActionTag::read( Reader& reader, SWF& swf, MovieFrames&)
+	{
         uint8_t code;
         do {
 			code = reader.get<uint8_t>();
-            ACTION action = {code, 0, 0};
-    		if (code & 0x80)
-			{
+            ACTION action = {code, 0, 0, NULL};
+    		if (code & 0x80) {
 				// Action contains extra data.
 				uint16_t length = reader.get<uint16_t>();
                 uint16_t read = 0;
@@ -34,7 +44,20 @@ namespace MonkSWF
                     action.data = reader.get<uint16_t>();
                     read = 2;
                 } else if (ACTION_GET_URL == code) {
-                    // do nothing
+                    // extract parameters
+					int pos = reader.getCurrentPos();
+					const char* url = reader.getString();
+					const char *target = reader.getString();
+					if (strncmp("FSCommand:", url, 10) == 0) {
+						action.padding = 1;
+						url += 10;
+					}
+					action.data = strlen(url) + 1;
+					const int paramSize = strlen(target) + 1;
+					action.buffer = new char[action.data + paramSize];
+					memcpy(action.buffer, url, action.data);
+					memcpy(action.buffer + action.data, target, paramSize);
+					read = reader.getCurrentPos() - pos;
                 }
                 reader.skip(length - read);
 			}
@@ -45,12 +68,10 @@ namespace MonkSWF
 
     void DoActionTag::setup(MovieClip& movie)
     {
-        ActionList::iterator it = moActions.begin();
-        while(moActions.end()!=it)
-        {
+        ActionArray::iterator it = moActions.begin();
+        while(moActions.end() != it) {
             const ACTION& action = (*it);
-            switch(action.code)
-            {
+            switch(action.code) {
             case ACTION_PLAY:
                 movie.play(true);
                 break;
@@ -66,7 +87,9 @@ namespace MonkSWF
                     if (! swf) break;
                     SWF::GetURLCallback callback = swf->getGetURL();
                     if (! callback) break;
-                    callback( movie );
+					const char *url = action.buffer;
+					const char *target = action.buffer + action.data;
+					callback( movie, 0<action.padding, url, target );
                 }
                 break;
             default:

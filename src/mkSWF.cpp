@@ -19,215 +19,357 @@
 #include "tags/DefineSound.h"
 #include "tags/DoAction.h"
 #include "tags/FrameLabel.h"
+#include "tags/DefineButton.h"
 
 namespace MonkSWF {
 	
-    Speaker *Speaker::spSpeaker = NULL;
-    Renderer *Renderer::spRenderer = NULL;
-    SWF::LoadAssetCallback SWF::_asset_loader = NULL;
-	SWF::TagFactoryMap SWF::_tag_factories;
+Speaker *Speaker::spSpeaker = NULL;
+Renderer *Renderer::spRenderer = NULL;
+SWF::LoadAssetCallback SWF::_asset_loader = NULL;
+SWF::TagFactoryMap SWF::_tag_factories;
+MATRIX3f SWF::_sCurrentMatrix = kMatrix3fIdentity;
+CXFORM SWF::_sCurrentCXForm = kCXFormIdentity;
 
-	SWF::SWF()
-    	:MovieClip(_swf_data)
-        ,_elapsedAccumulator(0.0f)
-        ,_elapsedAccumulatorDuplicate(0.0f)
-        ,_getURL(0)
-	{
-        _owner = this;
-	}
+SWF::SWF()
+    :MovieClip(this, _swf_data)
+	,_mouseX(0)
+	,_mouseY(0)
+	,_mouseButtonStateCurr(0)
+	,_mouseButtonStateLast(0)
+	,_mouseInsideEntityLast(false)
+	,_pActiveEntity(NULL)
+    ,_elapsedAccumulator(0.0f)
+    ,_elapsedAccumulatorDuplicate(0.0f)
+    ,_getURL(0)
+{
+  //_owner = this;
+}
 
-	SWF::~SWF()
-    {
-        MovieClip::destroyFrames(_swf_data);
-		// foreach movieclip in sprite
-		MovieList::iterator mit = _movie_list.begin();
-		while (_movie_list.end() != mit)
-        {
-            delete *mit;
-            ++mit;
-        }
-    }
+SWF::~SWF()
+{
+    MovieClip::destroyFrames(_swf_data);
+}
 
-	MovieClip *SWF::createMovieClip(const ITag &tag)
-	{
-		const DefineSpriteTag& spriteImpl = (const DefineSpriteTag&) tag;
-        MovieClip *movie = new MovieClip( this, spriteImpl.getMovieFrames() );
-		_movie_list.push_back(movie);
-		return movie;
-	}
+#if 0
+MovieClip *SWF::createMovieClip(const ITag &tag)
+{
+	MK_ASSERT( tag.code() == TAG_DEFINE_SPRITE );
+	const DefineSpriteTag& spriteImpl = (const DefineSpriteTag&) tag;
+    MovieClip *movie = new MovieClip( this, spriteImpl.getMovieFrames() );
+	_movie_list.push_back(movie);
+	return movie;
+}
+#endif
 
-    //static function
-	bool SWF::initialize(LoadAssetCallback func) {
-        _asset_loader = func;
-		// setup the factories
-		addFactory( TAG_END,			EndTag::create );
+//static function
+bool SWF::initialize(LoadAssetCallback func) {
+    _asset_loader = func;
+	// setup the factories
+	addFactory( TAG_END,			EndTag::create );
 		
-		addFactory( TAG_DEFINE_SHAPE,	DefineShapeTag::create );		// DefineShape
-		addFactory( TAG_DEFINE_SHAPE2,	DefineShapeTag::create );		// DefineShape2
-		addFactory( TAG_DEFINE_SHAPE3,	DefineShapeTag::create );		// DefineShape3
-		addFactory( TAG_DEFINE_SHAPE4,	DefineShapeTag::create );		// DefineShape4
+	addFactory( TAG_DEFINE_SHAPE,	DefineShapeTag::create );		// DefineShape
+	addFactory( TAG_DEFINE_SHAPE2,	DefineShapeTag::create );		// DefineShape2
+	addFactory( TAG_DEFINE_SHAPE3,	DefineShapeTag::create );		// DefineShape3
+	addFactory( TAG_DEFINE_SHAPE4,	DefineShapeTag::create );		// DefineShape4
 
-		addFactory( TAG_DEFINE_SPRITE,	DefineSpriteTag::create );
-		addFactory( TAG_PLACE_OBJECT2,	PlaceObjectTag::create );
-		addFactory( TAG_REMOVE_OBJECT2,	RemoveObjectTag::create );
-		addFactory( TAG_SHOW_FRAME,		ShowFrameTag::create );
+	addFactory( TAG_DEFINE_BUTTON,	DefineButtonTag::create );
+	addFactory( TAG_DEFINE_BUTTON2,	DefineButton2Tag::create );
+
+	addFactory( TAG_DEFINE_SPRITE,	DefineSpriteTag::create );
+	addFactory( TAG_PLACE_OBJECT2,	PlaceObjectTag::create );
+	addFactory( TAG_REMOVE_OBJECT2,	RemoveObjectTag::create );
+	addFactory( TAG_SHOW_FRAME,		ShowFrameTag::create );
 		
-        addFactory( TAG_EXPORT_ASSETS,  ExportAssetsTag::create );
-        addFactory( TAG_IMPORT_ASSETS2, ImportAssets2Tag::create );
+    addFactory( TAG_EXPORT_ASSETS,  ExportAssetsTag::create );
+    addFactory( TAG_IMPORT_ASSETS2, ImportAssets2Tag::create );
 
-        addFactory( TAG_DEFINE_SOUND,   DefineSoundTag::create );
-        addFactory( TAG_START_SOUND,    StartSoundTag::create );
+    addFactory( TAG_DEFINE_SOUND,   DefineSoundTag::create );
+    addFactory( TAG_START_SOUND,    StartSoundTag::create );
 
-        addFactory( TAG_DO_ACTION,      DoActionTag::create );
-        addFactory( TAG_FRAME_LABEL,    FrameLabelTag::create );
+    addFactory( TAG_DO_ACTION,      DoActionTag::create );
+    addFactory( TAG_FRAME_LABEL,    FrameLabelTag::create );
 
-		addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
-		return true;
-	}
+	addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
+	return true;
+}
 	
-	bool SWF::read( Reader& reader ) {
-		bool ret = _header.read( reader );
-        if (false == ret)
-            return false;
-
-		createFrames(reader, *this, _swf_data);
-
-        MK_ASSERT(getFrameCount() == _header.getFrameCount());
-		this->gotoFrame( 0 );
-		return true;
-	}
-	
-	void SWF::print()
-	{
-		_header.print();
-	}
-
-    bool SWF::addAsset(uint16_t id, const char *name, bool import)
-    {
-        if (_asset_loader)
-        {
-            uint32_t handle = _asset_loader( name, import );
-            if (0 != handle) {
-                Asset asset = { import, handle };
-                moAssets[id] = asset;
-            } else {
-                _library[name] = id;
-            }
-            return true;
-        }
+bool SWF::read( Reader& reader ) {
+	bool ret = _header.read( reader );
+    if (false == ret)
         return false;
-    }
 
-    MovieClip *SWF::duplicate(const char *name)
+	createFrames(reader, *this, _swf_data);
+
+    MK_ASSERT(getFrameCount() == _header.getFrameCount());
+	this->gotoFrame( 0 );
+	return true;
+}
+	
+void SWF::print()
+{
+	_header.print();
+}
+
+bool SWF::addAsset(uint16_t id, const char *name, bool import)
+{
+    if (_asset_loader)
     {
-        MovieClip *movie = NULL;
-        SymbolDictionary::const_iterator it = _library.find(name);
-        if (_library.end() != it)
-        {
-            ITag *tag = _dictionary[it->second];
-            if ( tag->code() == TAG_DEFINE_SPRITE ) {
-                // create a new instance for playback
-				movie = createMovieClip( *tag );
-                movie->createTransform();
-                _duplicates.push_back(movie);
-            }
+        uint32_t handle = _asset_loader( name, import );
+        if (0 != handle) {
+            Asset asset = { import, handle };
+            moAssets[id] = asset;
+        } else {
+            _library[name] = id;
         }
-        return movie;
+        return true;
     }
+    return false;
+}
 
- 	void SWF::updateDuplicate( float delta )
-	{
-        _elapsedAccumulatorDuplicate += delta;
-        const float secondPerFrame = getFrameRate();
-        while (secondPerFrame <= _elapsedAccumulatorDuplicate)
-        {
-            _elapsedAccumulatorDuplicate -= secondPerFrame;
-		    MovieList::iterator it = _duplicates.begin();
-		    while (_duplicates.end() != it)
-            {
-                (*it)->update();
-                ++it;
-            }
-        }
-    }
-
-    extern MATRIX3f goRootMatrix;
-    extern CXFORM goRootCXForm;
-
-	void SWF::drawDuplicate(void)
+MovieClip *SWF::duplicate(const char *name)
+{
+    MovieClip *movie = NULL;
+    SymbolDictionary::const_iterator it = _library.find(name);
+    if (_library.end() != it)
     {
-        Renderer::getRenderer()->drawBegin();
-	    MovieList::iterator it = _duplicates.begin();
-	    while (_duplicates.end() != it)
-        {
-            MATRIX *xform = (*it)->getTransform();
-            MK_ASSERT(xform);
-            MATRIX3f origMTX = goRootMatrix, mtx;
-            MATRIX3fSet(mtx, *xform); // convert matrix format
-            MATRIX3fMultiply(goRootMatrix, mtx, goRootMatrix);
+        ITag *tag = _dictionary[it->second];
+        if ( tag->code() == TAG_DEFINE_SPRITE ) {
+            // create a new instance for playback
+			movie = createMovieClip( *(DefineSpriteTag*)tag );
+            movie->createTransform();
+            _duplicates.push_back(movie);
+        }
+    }
+    return movie;
+}
 
-            (*it)->draw();
+void SWF::updateDuplicate( float delta )
+{
+    _elapsedAccumulatorDuplicate += delta;
+    const float secondPerFrame = getFrameRate();
+    while (secondPerFrame <= _elapsedAccumulatorDuplicate)
+    {
+        _elapsedAccumulatorDuplicate -= secondPerFrame;
+		MovieClipArray::iterator it = _duplicates.begin();
+		while (_duplicates.end() != it)
+        {
+            (*it)->update();
             ++it;
-
-    		// restore old matrix
-            goRootMatrix = origMTX;
         }
-        Renderer::getRenderer()->drawEnd();
-	}
+    }
+}
 
-	void SWF::drawMovieClip(MovieClip *movie, float alpha)
-	{
-		if (movie == NULL)
-			return;
-
-        MATRIX *xform = movie->getTransform();
+void SWF::drawDuplicate(void)
+{
+    Renderer::getRenderer()->drawBegin();
+	MovieClipArray::iterator it = _duplicates.begin();
+	while (_duplicates.end() != it)
+    {
+        MATRIX *xform = (*it)->getTransform();
         MK_ASSERT(xform);
-        MATRIX3f origMTX = goRootMatrix, mtx;
+		MATRIX3f origMTX = _sCurrentMatrix, mtx;
         MATRIX3fSet(mtx, *xform); // convert matrix format
-        MATRIX3fMultiply(goRootMatrix, mtx, goRootMatrix);
-        float origAlpha = goRootCXForm.mult.a;
-        goRootCXForm.mult.a = alpha;
+        MATRIX3fMultiply(_sCurrentMatrix, mtx, _sCurrentMatrix);
 
-		Renderer::getRenderer()->drawBegin();
-        movie->draw();
-        Renderer::getRenderer()->drawEnd();
+        (*it)->draw();
+        ++it;
 
     	// restore old matrix
-        goRootMatrix = origMTX;
-        goRootCXForm.mult.a = origAlpha;
-	}
-
-	void SWF::update( float delta )
-	{
-        _elapsedAccumulator += delta;
-        const float secondPerFrame = getFrameRate();
-        while (secondPerFrame <= _elapsedAccumulator)
-        {
-            _elapsedAccumulator -= secondPerFrame;
-			MovieClip::update();
-        }
+        _sCurrentMatrix = origMTX;
     }
-    
-	void SWF::draw(void) {
-#ifdef USE_OPENVG
-		// make sure we use even odd fill rule
-		vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
-		// clear the screen
-		VGfloat clearColor[] = {1,1,1,1};
-		vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
-		vgClear(0,0,_header.getFrameWidth(), _header.getFrameHeight() );
-		
-		vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
-		VGfloat oldMatrix[9];
-		vgGetMatrix( oldMatrix );
-		vgMultMatrix( _rootTransform );
-#endif
-        Renderer::getRenderer()->drawBegin();
-		MovieClip::draw();
-        Renderer::getRenderer()->drawEnd();
-#ifdef USE_OPENVG
-		// restore old matrix
-		vgLoadMatrix( oldMatrix );
-#endif
-	}
+    Renderer::getRenderer()->drawEnd();
 }
+
+void SWF::drawMovieClip(MovieClip *movie, float alpha)
+{
+	if (movie == NULL)
+		return;
+
+    MATRIX *xform = movie->getTransform();
+    MK_ASSERT(xform);
+    MATRIX3f origMTX = _sCurrentMatrix, mtx;
+    MATRIX3fSet(mtx, *xform); // convert matrix format
+    MATRIX3fMultiply(_sCurrentMatrix, mtx, _sCurrentMatrix);
+    float origAlpha = _sCurrentCXForm.mult.a;
+    _sCurrentCXForm.mult.a = alpha;
+
+	Renderer::getRenderer()->drawBegin();
+    movie->draw();
+    Renderer::getRenderer()->drawEnd();
+
+    // restore old matrix
+    _sCurrentMatrix = origMTX;
+    _sCurrentCXForm.mult.a = origAlpha;
+}
+
+void SWF::update( float delta )
+{
+    _elapsedAccumulator += delta;
+    const float secondPerFrame = getFrameRate();
+    while (secondPerFrame <= _elapsedAccumulator)
+    {
+        _elapsedAccumulator -= secondPerFrame;
+		MovieClip::update();
+    }
+}
+    
+void SWF::draw(void) {
+#ifdef USE_OPENVG
+	// make sure we use even odd fill rule
+	vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
+	// clear the screen
+	VGfloat clearColor[] = {1,1,1,1};
+	vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
+	vgClear(0,0,_header.getFrameWidth(), _header.getFrameHeight() );
+		
+	vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
+	VGfloat oldMatrix[9];
+	vgGetMatrix( oldMatrix );
+	vgMultMatrix( _rootTransform );
+#endif
+    Renderer::getRenderer()->drawBegin();
+	MovieClip::draw();
+    Renderer::getRenderer()->drawEnd();
+#ifdef USE_OPENVG
+	// restore old matrix
+	vgLoadMatrix( oldMatrix );
+#endif
+}
+
+RECT SWF::calculateRectangle(uint16_t character, const MATRIX* xf) {
+	RECT rect = {0,0,-0,-0};
+	ITag *tag = this->getCharacter( character );
+	if(! tag)
+		return rect;
+
+    switch( tag->code()) {
+	case TAG_DEFINE_BUTTON2:
+		{
+			DefineButton2Tag *btn = (DefineButton2Tag*)tag;
+			rect = btn->getRectangle();
+		}
+		break;
+	case TAG_DEFINE_SPRITE:
+		{
+			DefineSpriteTag *sprite = (DefineSpriteTag*)tag;
+			rect = sprite->getMovieFrames()._rectangle;
+		}
+		break;
+	case TAG_DEFINE_SHAPE:
+	case TAG_DEFINE_SHAPE2:
+	case TAG_DEFINE_SHAPE3:
+	case TAG_DEFINE_SHAPE4:
+		{
+			DefineShapeTag *shape = (DefineShapeTag*)tag;
+			rect = shape->getRectangle();
+		}
+		break;
+	default:
+		break;
+    }
+	if (xf) {
+		xf->transform(rect, rect);
+	}
+	return rect;
+}
+
+void SWF::notifyMouse(int button, int x, int y) {
+	_mouseX = x;
+	_mouseY = y;
+	_mouseButtonStateCurr = button;
+	ICharacter *pTopMost = this->getTopMost(float(x), float(y));
+
+	if (0 < _mouseButtonStateLast) {
+		// Mouse button was down.
+#if 0
+		// Handle trackAsMenu dragOver
+		if (NULL == _pActiveEntity) { //|| _pActiveEntity->get_track_as_menu() )
+			if ( pTopMost && (pTopMost != _pActiveEntity) )  { // && pTopMost->get_track_as_menu() )
+				// Transfer to topmost entity, dragOver
+				_pActiveEntity = pTopMost;
+				//_pActiveEntity->on_event( event_id::DRAG_OVER );
+				_mouseInsideEntityLast = true;
+			}
+		}
+
+		// Handle onDragOut, onDragOver
+		if (_mouseInsideEntityLast) {
+			if (pTopMost != _pActiveEntity) {
+				if (_pActiveEntity)	{
+					//active_entity->on_event( event_id::DRAG_OUT );
+				}
+				_mouseInsideEntityLast = false;
+			}
+		} else {
+			if (pTopMost == _pActiveEntity) {
+				if (_pActiveEntity) {
+				//_pActiveEntity->on_event( event_id::DRAG_OVER );
+				}
+				_mouseInsideEntityLast = true;
+			}
+		}
+#endif
+		// Handle onRelease, onReleaseOutside
+		if (0 == _mouseButtonStateCurr) {
+			// Mouse button is up.
+			//m_mouse_listener.notify(event_id::MOUSE_UP);
+			if (pTopMost != _pActiveEntity) {
+				// onReleaseOutside
+				if (_pActiveEntity) { //&& !active_entity->get_track_as_menu() )
+					_pActiveEntity->onEvent( Event::RELEASE_OUTSIDE );
+				}
+			} else {
+				// onRelease
+				if (_pActiveEntity && _mouseInsideEntityLast) {
+					_pActiveEntity->onEvent( Event::RELEASE );
+				}
+			}
+		}
+	} else {
+		// Mouse button was up.
+		if (0 == _mouseButtonStateCurr) {
+			// Mouse button is up.
+			// New active entity is whatever is below the mouse right now.
+			if (pTopMost != _pActiveEntity) {
+				// onRollOut
+				if (_pActiveEntity && _mouseInsideEntityLast) {
+					_pActiveEntity->onEvent( Event::ROLL_OUT );
+					_mouseInsideEntityLast = false;
+				}
+				// onRollOver
+				if (pTopMost) {
+					pTopMost->onEvent( Event::ROLL_OVER );
+					_mouseInsideEntityLast = true;
+				}
+				_pActiveEntity = pTopMost;
+			}
+		} else {
+			// Mouse button is down.
+#if 0
+			//m_mouse_listener.notify(event_id::MOUSE_DOWN);
+			// set/kill focus
+			// It's another entity ?
+			if (m_current_active_entity != active_entity) {
+				// First to clean focus
+				if (m_current_active_entity != NULL) {
+					m_current_active_entity->on_event(event_id::KILLFOCUS);
+					m_current_active_entity = NULL;
+				}
+				// Then to set focus
+				if (active_entity != NULL) {
+					if (active_entity->on_event(event_id::SETFOCUS)){
+						m_current_active_entity = active_entity;
+					}
+				}
+			}
+#endif
+			// onPress
+			if (_pActiveEntity && _mouseInsideEntityLast) {
+				_pActiveEntity->onEvent(Event::PRESS);
+			}
+		}
+	}
+	_mouseButtonStateLast = _mouseButtonStateCurr;
+}
+
+}//namespace
