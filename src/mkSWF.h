@@ -104,7 +104,12 @@ namespace MonkSWF {
         virtual ~SWF();
 
 		bool read( Reader &reader );
+
 		void print();
+
+#ifdef WIN32
+		bool trimSkippedTags( const char* output_filename, Reader& reader );
+#endif
 		
 		void  addCharacter( ITag* tag, uint16_t cid ) { _dictionary[cid] = tag; }
 		ITag* getCharacter( uint16_t i ) {

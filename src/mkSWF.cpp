@@ -372,4 +372,52 @@ void SWF::notifyMouse(int button, int x, int y) {
 	_mouseButtonStateLast = _mouseButtonStateCurr;
 }
 
+#ifdef WIN32
+bool SWF::trimSkippedTags( const char* output, Reader& reader ) {
+	ITag* tag = NULL;
+
+	FILE* fp = fopen(output, "wb");
+	const char *data = reader.getData();
+	int size, start = reader.getCurrentPos();
+
+	// swf header
+	bool ret = _header.read( reader );
+    if (false == ret)
+        return false;
+
+	// write back
+	size = reader.getCurrentPos() - start;
+	fwrite(data, size, 1, fp);
+	data = reader.getData();
+	start = reader.getCurrentPos();
+
+	// get the first tag
+    TagHeader header;
+	header.read( reader );
+	while( header.code() != TAG_END ) { 
+        const uint32_t code = header.code();
+		SWF::TagFactoryFunc factory = SWF::getTagFactory( code );
+		if ( factory ) {
+			// write back tag
+			size = reader.getCurrentPos() - start + header.length();
+			fwrite(data, size, 1, fp);
+			MK_TRACE("*** WRITE *** ");
+		} else {
+			MK_TRACE("*** SKIP *** ");
+		}
+		header.print();
+		reader.skip( header.length() );
+		data = reader.getData();
+		start = reader.getCurrentPos();
+		header.read( reader );
+	}
+	// write back final tag
+	size = reader.getCurrentPos() - start;
+	fwrite(data, size, 1, fp);
+
+	fclose(fp);
+    return true;
+}
+#endif
+
 }//namespace

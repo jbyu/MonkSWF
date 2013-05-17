@@ -483,7 +483,37 @@ void myURLCallback( MonkSWF::MovieClip&, bool isFSCommand, const char *url, cons
 int _tmain(int argc, char* argv[])
 {
     _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); 
-    if (argc < 2) return 0;
+    if (argc < 2)
+		return 0;
+
+	// load swf
+    char *filename = argv[1];
+    FILE *fp = fopen(filename,"rb");
+    fseek(fp, 0, SEEK_END);
+    int size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    char *pBuffer = new char[size];
+    fread(pBuffer,size,1,fp);
+    fclose(fp);
+    MonkSWF::Reader reader(pBuffer, size);
+    MonkSWF::SWF::initialize(myLoadAssetCallback);
+    gpSWF = new MonkSWF::SWF;
+
+	// trim unsupported tags
+	if (2 < argc && 0 == strcmp(argv[2], "--trim")) {
+		char output[1024];
+		if (3 < argc) {
+			strcpy(output, argv[3]);
+		} else {
+			strcpy(output, filename);
+			//char *ptr = strrchr(output, '.');
+			//strcpy(ptr,".nbwf");
+		}
+		gpSWF->trimSkippedTags(output, reader);
+	    delete [] pBuffer;
+		delete [] gpSWF;
+		return 1;
+	}
 
     atexit(_terminate_);
     glutInit(&argc, argv);
@@ -530,21 +560,10 @@ int _tmain(int argc, char* argv[])
 #endif
 
 #if 1
-    char *filename = argv[1];
-    FILE *fp = fopen(filename,"rb");
-    fseek(fp, 0, SEEK_END);
-    int size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    char *pBuffer = new char[size];
-    fread(pBuffer,size,1,fp);
-    fclose(fp);
-    MonkSWF::Reader reader(pBuffer, size);
     MonkSWF::Renderer::setRenderer(new glRenderer);
-    MonkSWF::SWF::initialize(myLoadAssetCallback);
-    gpSWF = new MonkSWF::SWF;
+	gpSWF->setGetURL( myURLCallback );
     bool ret = gpSWF->read(reader);
     delete [] pBuffer;
-	gpSWF->setGetURL( myURLCallback );
 
     if (ret) {
         width = (int)gpSWF->getFrameWidth();

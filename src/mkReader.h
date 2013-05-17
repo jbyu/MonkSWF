@@ -181,8 +181,9 @@ namespace MonkSWF {
 			return (float) val / 65536.0f;
 		}
 
+		const char *getData() const { return _data + _cur; }
+
     private:
-	
 		char*		_data;
 		int32_t		_sz;		// total size of the buffer
 		int32_t		_cur;		// current ptr/idx into buffer

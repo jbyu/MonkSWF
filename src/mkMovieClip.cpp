@@ -65,8 +65,7 @@ bool MovieClip::createFrames( Reader& reader, SWF& swf, MovieFrames &data )
             }
 
             // create a new frame
-            if ( TAG_SHOW_FRAME == code )
-            {
+            if ( TAG_SHOW_FRAME == code ) {
 				data._frames.push_back( frame_tags );
 				frame_tags = new TagList;
 				sbCalculateRectangle = false;
