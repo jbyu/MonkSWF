@@ -29,7 +29,7 @@ namespace MonkSWF {
 		const MovieFrames& getMovieFrames(void) const { return _data; }
 
 		static ITag* create( TagHeader& header ) {
-		    return (ITag*)(new DefineSpriteTag( header ));
+		    return new DefineSpriteTag( header );
 	    }
 
 	private:

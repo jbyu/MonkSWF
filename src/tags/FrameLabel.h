@@ -31,7 +31,7 @@ namespace MonkSWF
 		}
 		
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new FrameLabelTag( header ));
+			return new FrameLabelTag( header );
 		}				
 	};
 }	

@@ -40,6 +40,8 @@ void ERRCHECK(FMOD_RESULT result)
     }
 }
 
+//-----------------------------------------------------------------------------
+
 class fmodSpeaker : public MonkSWF::Speaker
 {
     AssetCache moCache;
@@ -85,23 +87,8 @@ public:
 
 #endif//USE_FMOD
 
-//=========================================================================
-uint32_t myLoadAssetCallback( const char *name, bool import )
-{
-    if (import)
-        return 0;
-    if (strstr(name,".png"))
-    {
-        return MonkSWF::Renderer::getRenderer()->getTexture(name);
-    }
-    else if (strstr(name,".wav"))
-    {
-        return MonkSWF::Speaker::getSpeaker()->getSound(name);
-    }
-    return 0;
-}
+//-----------------------------------------------------------------------------
 
-//=========================================================================
 class glRenderer : public MonkSWF::Renderer
 {
     typedef std::map<std::string, GLuint> TextureCache;
@@ -266,6 +253,85 @@ public:
 #endif
     }
 
+	void drawLineStrip(const MonkSWF::VertexArray& vertices, const MonkSWF::CXFORM& cxform, const MonkSWF::LineStyle& style)
+	{
+		MonkSWF::COLOR4f color = cxform.mult * style.getColor();
+		color += cxform.add;
+		glLineWidth(style.getWidth());
+		glDisable(GL_TEXTURE_2D);
+	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	    glColor4f(color.r, color.g, color.b, color.a);
+		glBegin(GL_LINE_STRIP);
+		for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {
+			glVertex2f(it->x, it->y);
+		}
+		glEnd();
+	}
+
+	void drawTriangles( const MonkSWF::VertexArray& vertices, const MonkSWF::CXFORM& cxform, const MonkSWF::FillStyle& style, unsigned int texture )
+    {
+#define PRIMITIVE_MODE	GL_TRIANGLES
+//#define PRIMITIVE_MODE	GL_LINES
+        if (0 == texture) {
+			MonkSWF::COLOR4f color = cxform.mult * style.getColor();
+			color += cxform.add;
+			glDisable(GL_TEXTURE_2D);
+	        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	        glColor4f(color.r, color.g, color.b, color.a);
+			glBegin(PRIMITIVE_MODE);
+			for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {
+				glVertex2f(it->x, it->y);
+			}
+			glEnd();
+			return;
+		}
+
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, texture);
+		if (style.type() & 0x1) {
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+		} else {
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+		}
+		glMatrixMode(GL_TEXTURE);
+		glLoadIdentity();
+		applyTransform( style.getBitmapMatrix() );
+		glMatrixMode(GL_MODELVIEW);
+
+        // C' = C * Mult + Add
+        // in opengl, use blend mode and multi-pass to achieve that
+        // 1st pass TexEnv(GL_BLEND) with glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        //      Cp * (1-Ct) + Cc *Ct 
+        // 2nd pass TexEnv(GL_MODULATE) with glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+        //      dest + Cp * Ct
+        // let Mult as Cc and Add as Cp, then we get the result
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
+        glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, &cxform.mult.r);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, cxform.mult.a);
+        glBegin(PRIMITIVE_MODE);
+		for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {
+		    glTexCoord2f(it->x, it->y);
+			glVertex2f(it->x, it->y);
+		}
+	    glEnd();
+#if 1
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        glColor4f(cxform.add.r, cxform.add.g, cxform.add.b, 1);
+        glBegin(PRIMITIVE_MODE);
+		for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {
+		    glTexCoord2f(it->x, it->y);
+			glVertex2f(it->x, it->y);
+		}
+	    glEnd();
+#endif
+    }
+
     void drawImportAsset( const MonkSWF::RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle )
     {
         glDisable(GL_TEXTURE_2D);
@@ -300,7 +366,7 @@ public:
     glPopMatrix();
     }
 
-    unsigned int getTexture( const char *filename )
+    unsigned int getTexture( const char *filename , int &width, int&height, int&x, int&y)
     {
         unsigned int ret = 0;
         //char path[256];
@@ -308,7 +374,7 @@ public:
         TextureCache::iterator it = moCache.find(filename);
         if (moCache.end()!=it)
             return it->second;
-
+#if 0
         ret = SOIL_load_OGL_texture(
 					filename,
 					SOIL_LOAD_AUTO,
@@ -322,6 +388,17 @@ public:
 					//| SOIL_FLAG_CoCg_Y
 					//| SOIL_FLAG_TEXTURE_RECTANGLE
 					);
+#else
+		x = y = 0;
+		int channels;
+		unsigned char *img = SOIL_load_image( filename, &width, &height, &channels, SOIL_LOAD_AUTO );
+		if( NULL == img ) {
+			return 0;
+		}
+		ret = SOIL_create_OGL_texture(img, width, height, channels,
+			SOIL_CREATE_NEW_ID, SOIL_FLAG_POWER_OF_TWO | SOIL_FLAG_MIPMAPS);
+		SOIL_free_image_data(img);
+#endif
         moCache[filename] = ret;
         MonkSWF::Log("SOIL: %s\n", SOIL_last_result());
         return ret;
@@ -329,7 +406,34 @@ public:
 
 };
 
-//=========================================================================
+//-----------------------------------------------------------------------------
+
+MonkSWF::Asset myLoadAssetCallback( const char *name, bool import )
+{
+	MonkSWF::Asset asset = {import, 0, 0, 0};
+    if (import) {
+		asset.handle = 1;
+        return asset;
+	}
+
+    if (strstr(name,".png")) {
+		int x,y,w,h;
+		glRenderer *renderer = (glRenderer*) MonkSWF::Renderer::getRenderer();
+		asset.handle = renderer->getTexture(name, w,h,x,y);
+		const float invW = 1.f / w;
+		const float invH = 1.f / h;
+		asset.param[0] = MonkSWF::SWF_TWIPS * invW;
+		asset.param[1] = MonkSWF::SWF_TWIPS * invH;
+		asset.param[2] = x * invW;
+		asset.param[3] = y * invH;
+    } else if (strstr(name,".wav"))  {
+        asset.handle = MonkSWF::Speaker::getSpeaker()->getSound(name);
+    }
+    return asset;
+}
+
+//-----------------------------------------------------------------------------
+
 void _terminate_(void)
 {
 #ifdef  USE_FMOD
@@ -466,7 +570,7 @@ static int siLastButtonStatus = 0;
 void motionCB( int x, int y) {
 	if (gpSWF) {
 		gpSWF->notifyMouse(siLastButtonStatus, x, y);
-		//gpSWF->notifyMouse(siLastButtonStatus, 100, 200);
+		//gpSWF->notifyMouse(siLastButtonStatus, 100, 100);
 	}
 }
 
@@ -511,7 +615,7 @@ int _tmain(int argc, char* argv[])
 		}
 		gpSWF->trimSkippedTags(output, reader);
 	    delete [] pBuffer;
-		delete [] gpSWF;
+		delete gpSWF;
 		return 1;
 	}
 

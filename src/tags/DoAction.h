@@ -50,7 +50,7 @@ namespace MonkSWF
         virtual void setup(MovieClip&);
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new DoActionTag( header ));
+			return new DoActionTag( header );
 		}				
     };
 }	

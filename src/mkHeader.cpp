@@ -94,6 +94,7 @@ namespace MonkSWF {
 		
 		// get the bound rectangle
         reader.getRectangle(_frame_size);
+		reader.align();
 		uint16_t fr = reader.get<uint16_t>();
 		_frame_rate = 1.f/(fr>>8);
 		_frame_count = reader.get<uint16_t>(); 

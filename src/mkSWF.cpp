@@ -114,9 +114,8 @@ bool SWF::addAsset(uint16_t id, const char *name, bool import)
 {
     if (_asset_loader)
     {
-        uint32_t handle = _asset_loader( name, import );
-        if (0 != handle) {
-            Asset asset = { import, handle };
+        Asset asset = _asset_loader( name, import );
+        if (0 != asset.handle) {
             moAssets[id] = asset;
         } else {
             _library[name] = id;
@@ -277,7 +276,7 @@ void SWF::notifyMouse(int button, int x, int y) {
 	_mouseX = x;
 	_mouseY = y;
 	_mouseButtonStateCurr = button;
-	ICharacter *pTopMost = this->getTopMost(float(x), float(y));
+	ICharacter *pTopMost = this->getTopMost(float(x), float(y), false);
 
 	if (0 < _mouseButtonStateLast) {
 		// Mouse button was down.
@@ -376,7 +375,13 @@ void SWF::notifyMouse(int button, int x, int y) {
 bool SWF::trimSkippedTags( const char* output, Reader& reader ) {
 	ITag* tag = NULL;
 
-	FILE* fp = fopen(output, "wb");
+	FILE* fp = NULL;
+	errno_t error = fopen_s(&fp, output, "wb");
+	if (0 != error)
+		return false;
+	if (0 == fp)
+		return false;
+
 	const char *data = reader.getData();
 	int size, start = reader.getCurrentPos();
 

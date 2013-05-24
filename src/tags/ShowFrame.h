@@ -28,7 +28,7 @@ namespace MonkSWF {
 		virtual void print() { MK_TRACE("SHOW_FRAME\n"); }
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new ShowFrameTag( header ));
+			return new ShowFrameTag( header );
 		}				
 	};
 }

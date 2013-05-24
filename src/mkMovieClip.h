@@ -37,6 +37,7 @@ namespace MonkSWF {
         MATRIX* getTransform(void) { return _transform; }
 
         void gotoLabel( const char* label, bool jump = false );
+        void gotoAndPlay( uint32_t frame );
 
 		// override ICharacter function
         virtual const RECT& getRectangle(void) const { return _data._rectangle; }
@@ -46,12 +47,12 @@ namespace MonkSWF {
 			_play = enable; 
 		}
 		virtual void gotoFrame( uint32_t frame );
-		virtual ICharacter* getTopMost(float localX, float localY);
+		virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest);
 
 		uint32_t getCurrentFrame( void ) const { return _frame; }
         uint32_t getFrameCount( void ) const { return _data._frames.size(); }
 
-        void step( void ) { gotoFrame( this->getCurrentFrame() + 1 );  }
+        void step( int delta = 1 ) { gotoFrame( this->getCurrentFrame() + delta );  }
 
         bool isPlay(void) const { return _play; }
 

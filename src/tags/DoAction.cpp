@@ -40,10 +40,23 @@ namespace MonkSWF
 				// Action contains extra data.
 				uint16_t length = reader.get<uint16_t>();
                 uint16_t read = 0;
-                if (ACTION_GOTO_FRAME == code) {
+				switch(code) {
+				case ACTION_GOTO_FRAME:
                     action.data = reader.get<uint16_t>();
                     read = 2;
-                } else if (ACTION_GET_URL == code) {
+					break;
+				case ACTION_GOTO_LABEL:
+					{
+					int pos = reader.getCurrentPos();
+					const char *label = reader.getString();
+					action.data = strlen(label) + 1;
+					action.buffer = new char[action.data];
+					memcpy(action.buffer, label, action.data);
+                    read =  reader.getCurrentPos() - pos;
+					}
+					break;
+				case ACTION_GET_URL: 
+					{
                     // extract parameters
 					int pos = reader.getCurrentPos();
 					const char* url = reader.getString();
@@ -58,6 +71,10 @@ namespace MonkSWF
 					memcpy(action.buffer, url, action.data);
 					memcpy(action.buffer + action.data, target, paramSize);
 					read = reader.getCurrentPos() - pos;
+					}
+					break;
+				default:
+					break;
                 }
                 reader.skip(length - read);
 			}
@@ -79,7 +96,10 @@ namespace MonkSWF
                 movie.play(false);
                 break;
             case ACTION_GOTO_FRAME:
-                movie.gotoFrame(action.data);
+                movie.gotoAndPlay(action.data);
+                break;
+            case ACTION_GOTO_LABEL:
+				movie.gotoLabel(action.buffer, false);
                 break;
             case ACTION_GET_URL:
                 {
@@ -92,6 +112,13 @@ namespace MonkSWF
 					callback( movie, 0<action.padding, url, target );
                 }
                 break;
+            case ACTION_NEXT_FRAME:
+                movie.step();
+                break;
+            case ACTION_PREV_FRAME:
+                movie.step(-1);
+                break;
+
             default:
                 break;
             }

@@ -22,11 +22,13 @@ bool ButtonRecord::read( Reader& reader, SWF& swf, int tag_type ) {
 	_state = flags;
 	_character_id = reader.get<uint16_t>();
 	_depth = reader.get<uint16_t>();
+
 	reader.getMatrix(_matrix);
+	reader.align();
 
 	if (TAG_DEFINE_BUTTON2 == tag_type) {
-		reader.align();
 		reader.getCXForm( _cxform );
+		reader.align();
 		if ( flags & 0x10 ) {
 			reader.getFilterList();
 		}
@@ -226,7 +228,7 @@ void Button::draw() {
 	}
 }
 
-ICharacter* Button::getTopMost(float x, float y) {
+ICharacter* Button::getTopMost(float x, float y, bool polygonTest) {
 	StateArray::iterator it = _buttonHitTests.begin();
 	while( it != _buttonHitTests.end() ) {
 		PlaceObjectTag* pObj = it->_object;
@@ -237,7 +239,7 @@ ICharacter* Button::getTopMost(float x, float y) {
 			POINTf local, world = {x,y};
 			m.setInverse(pObj->getTransform());
 			m.transform(local, world);
-			if (pCharacter->getTopMost(local.x, local.y))
+			if (pCharacter->getTopMost(local.x, local.y, true))
 				return this;
 		}
         ++it;

@@ -11,237 +11,208 @@
 #define __DefineShape_h__
 
 #include "mkTag.h"
-
-typedef float          VGfloat;
-typedef signed char    VGbyte;
-typedef unsigned char  VGubyte;
-typedef signed short   VGshort;
-typedef signed int     VGint;
-typedef unsigned int   VGuint;
-typedef unsigned int   VGbitfield;
-typedef VGuint VGHandle;
-#define VG_INVALID_HANDLE ((VGHandle)0)
-typedef VGHandle VGPath;
-typedef VGHandle VGImage;
-typedef VGHandle VGMaskLayer;
-typedef VGHandle VGFont;
-typedef VGHandle VGPaint;
-
-#ifndef VG_MAX_ENUM
-#define VG_MAX_ENUM 0x7FFFFFFF
-#endif
-#ifndef VG_API_CALL
-#define VG_API_CALL
-#endif
-#ifndef VG_API_ENTRY
-#define VG_API_ENTRY
-#endif
-#ifndef VG_API_EXIT
-#define VG_API_EXIT
-#endif
-#ifndef VGU_API_ENTRY
-#define VGU_API_ENTRY
-#endif
-#ifndef VGU_API_EXIT
-#define VGU_API_EXIT
-#endif
-
-
-using namespace std;
+#include "VectorEngine.h"
 
 namespace MonkSWF {
-    
-#define PAD_SPREAD_MODE         0x0
-#define REFLECT_SPREAD_MODE     0x1
-#define REPEAT_SPREAD_MODE     0x2
 
-//=========================================================================
-	class Gradient {
-	public:
-		bool read( Reader* reader, bool support_32bit_color );
-        void configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color);
+class DefineShapeTag;
+
+//-----------------------------------------------------------------------------
+
+class Gradient {
+public:
+	bool read( Reader* reader, bool support_32bit_color );
+    //void configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color);
 		
-	private:
-		uint8_t		_spread_mode;			// 0 = Pad mode 1 = Reflect mode 2 = Repeat mode
-		uint8_t		_interpolation_mode;	// 0 = Normal RGB mode interpolation 1 = Linear RGB mode interpolation
-		uint8_t		_num_gradients;
+private:
+	uint8_t		_spread_mode;			// 0 = Pad mode 1 = Reflect mode 2 = Repeat mode
+	uint8_t		_interpolation_mode;	// 0 = Normal RGB mode interpolation 1 = Linear RGB mode interpolation
+	uint8_t		_num_gradients;
 		
-		struct Record {
-			uint8_t	_ratio;
-			RGBA	_color;
-		};
-		
-		typedef std::vector< Gradient::Record > GradientRecordArray;
-		typedef GradientRecordArray::iterator GradientRecordArrayIter;
-		
-		GradientRecordArray		_gradient_records;
+	struct Record {
+		uint8_t	_ratio;
+		RGBA	_color;
 	};
-
-//=========================================================================
-#define SOLID_FILL				0x00
-#define LINEAR_GRADIENT_FILL	0x10
-#define RADIAL_GRADIENT_FILL	0x12
-#define FOCAL_GRADIENT_FILL		0x13
-#define REPEATING_BITMAP_FILL	0x40
-#define CLIPPED_BITMAP_FILL		0x41
-#define NON_SMOOTHED_REPEATING_BITMAP_FILL	0x42
-#define NON_SMOOTHED_CLIPPED_BITMAP_FILL	0x43
-
-	class FillStyle {
-	public:
-		FillStyle()
-		:_type(0xff)
-        ,_bitmap_id(0)
-		//,	_paint(VG_INVALID_HANDLE)
-		{}
 		
-		bool read( Reader& reader, bool support_32bit_color );
+	typedef std::vector< Gradient::Record > GradientRecordArray;
+	typedef GradientRecordArray::iterator GradientRecordArrayIter;
 		
-#ifdef USE_OPENVG
-		inline VGPaint getPaint() {
-			return _paint;
-		}
-#endif
+	GradientRecordArray		_gradient_records;
+};
 
-		void print() {
-            MK_TRACE("FILLSTYLE=0x%x, bitmap=%d\n", _type, _bitmap_id);
-		}
-		
-		uint64_t hash() const {
-			uint64_t hash = (uint64_t(_type) << 32) | (uint64_t(_color[0] * 255) << 24)
-				| (uint64_t(_color[1] * 255) << 16)
-				| (uint64_t(_color[2] * 255) << 8)
-				| (uint64_t(_color[3] * 255) << 0);
-			return hash;
-		}
+//-----------------------------------------------------------------------------
 
-        uint16_t getBitmap(void) const { return _bitmap_id; }
+class Edge {
+public:
+	Edge( const POINTf& anchor ) 
+		:_anchor(anchor)
+		,_control(anchor)
+	{}
+
+	Edge( const POINTf& anchor, const POINTf& ctrl ) 
+		:_anchor(anchor)
+		,_control(ctrl)
+	{}
+
+	POINTf& getAnchor() {
+		return _anchor;
+	}
+
+	POINTf& getControl() {
+		return _control;
+	}
+
+	void print() const {
+		if (_anchor == _control) {
+			MK_TRACE("[line]  anchor:%.2f, %.2f\n", _anchor.x, _anchor.y);
+		} else {
+			MK_TRACE("[curve] anchor:%.2f, %.2f;\tctrl:%.2f, %.2f\n", _anchor.x, _anchor.y, _control.x, _control.y);
+		}
+	}
+
+protected:		
+	POINTf	_anchor;
+	POINTf	_control;
+};
 	
-	private:
-		uint8_t		_type;
-		VGfloat		_color[4];
-		uint16_t	_bitmap_id;
-		MATRIX		_bitmap_matrix;
-#ifdef USE_OPENVG
-		MATRIX		_gradient_matrix;
-		Gradient	_gradient;
-		VGPaint		_paint;
-#endif
+//-----------------------------------------------------------------------------
+
+class Path {
+public:
+	typedef std::vector<Edge>	EdgeArray;
+
+	Path()
+		:_fill0( kINVALID )
+		,_fill1( kINVALID )
+		,_line( kINVALID )
+		,_new_shape(false)
+	{
+		_start.x = 0.f;
+		_start.y = 0.f;
+	}
+
+	void addEdge( const Edge& e ) {
+		MK_TRACE("add ");
+		e.print();
+		_edges.push_back( e );
+	}
+	
+	bool isEmpty() const {
+		return _edges.size() == 0;
+	}
+
+	POINTf& getStart() { return _start; }
+
+	EdgeArray& getEdges() { return _edges; }
+
+	// style indices
+	int _fill0;
+	int _fill1;
+	int _line;
+	bool _new_shape;
+
+private:
+	POINTf		_start;
+	EdgeArray	_edges;
+};
+
+//-----------------------------------------------------------------------------
+
+class ShapeWithStyle {
+public:
+	bool read( Reader& reader, SWF&, DefineShapeTag* define_shape_tag );
+	
+	void draw();
+
+	void addMesh(size_t fill_idx) {
+		MK_ASSERT(0 <= fill_idx && _fill_styles.size() > fill_idx);
+		Mesh mesh = { &_fill_styles[fill_idx], {false,0,{0,0,0,0}}};
+		_meshes.push_back(mesh);
+	}
+
+	void addMeshVertex( const POINTf& pt) {
+		_meshes.back()._vertices.push_back(pt);
+	}
+
+	void addLine(size_t line_idx) {
+		MK_ASSERT(0 <= line_idx && _line_styles.size() > line_idx);
+		Line l = { &_line_styles[line_idx] };
+		_lines.push_back(l);
+	}
+
+	void addLineVertex( const POINTf& pt) {
+		_lines.back()._vertices.push_back(pt);
+	}
+
+	bool isInside(float x, float y) const;
+
+private:
+	struct Mesh {
+		FillStyle	*_style;
+		Asset		_asset;
+		RECT		_bound;
+		VertexArray	_vertices;
+
+		bool isInsideMesh(const POINTf& pt) const;
 	};
-	
-//=========================================================================
-	class LineStyle {
-	public:
-		
-		LineStyle()
-		:	_paint(VG_INVALID_HANDLE)
-		{}
-		
-		bool read( Reader* reader, bool support_32bit_color );
-
-		inline VGPaint getPaint() {
-			return _paint;
-		}
-		
-		inline VGfloat getWidth() {
-			return _width;
-		}
-		
-		void print() {
-			//cout << "LineStyle: " << endl;
-			//cout << "\tWidth: " << _width << endl;
-			//cout << "\tColor: " << int(_color[0] * 255) << ", " << int(_color[1] * 255) << ", " << int(_color[2] * 255) << ", " << int(_color[3] * 255) << endl;
-		}
-		
-	private:
-		VGfloat		_width;
-		VGfloat		_color[4];
-		VGPaint		_paint;		
+	struct Line {
+		LineStyle	*_style;
+		VertexArray	_vertices;
 	};
+	typedef std::vector<Mesh>		MeshArray;
+	typedef std::vector<Line>		LineArray;
+	typedef std::vector<FillStyle>	FillStyleArray;
+	typedef std::vector<LineStyle>	LineStyleArray;
+	typedef std::vector<Path>		PathArray;
 
-	struct OpenVGPath {
-		OpenVGPath() : _fill_style( 0 ), _line_style( 0 )  {
-		}
-		
-		VGPath			_vgpath;
-		FillStyle*		_fill_style;
-		LineStyle*		_line_style;
-	};
-	
-	typedef std::vector<FillStyle> FillStyleArray;
-	typedef std::vector<LineStyle> LineStyleArray;
-	
-	class DefineShapeTag;
+	FillStyleArray	_fill_styles;
+	LineStyleArray	_line_styles;		
+	PathArray		_paths;
+	MeshArray		_meshes;
+	LineArray		_lines;
 
-//=========================================================================
-	class ShapeWithStyle {
-	public:
-		bool read( Reader& reader, DefineShapeTag* define_shape_tag );
-		void draw();
+	bool readStyles(Reader* reader, bool lineStyle2, bool support_32bit_color);
 
-        uint16_t getBitmap(void) const { return _bitmap; }
+	bool readShapeRecords(Reader* reader, bool lineStyle2, bool support_32bit_color);
 
-		void addVGPath( VGPath vgpath, int fill_idx, int line_idx ) {
-#ifdef USE_OPENVG
-			OpenVGPath path;
-			path._vgpath = vgpath;
-			if( fill_idx != -1 )
-				path._fill_style = &_fill_styles[fill_idx];
-			if( line_idx != -1 )
-				path._line_style = &_line_styles[line_idx];
-			
-			_paths.push_back( path );
-#endif
-		}
-		
-	private:
-        uint16_t        _bitmap;
-#ifdef USE_OPENVG
-		FillStyleArray		_fill_styles;
-		typedef std::list<OpenVGPath> OpenVGPathArray;
-		typedef OpenVGPathArray::iterator OpenVGPathArrayIter;
-		typedef std::map<uint64_t, FillStyle>	FillStyleMap;
-		FillStyleMap		_fill_style_map;
-		LineStyleArray		_line_styles;		
-		OpenVGPathArray		_paths;
-		DefineShapeTag*		_define_shape_tag;
-#endif
-	};
+	bool triangluate();
+};
 	
-//=========================================================================
-	class DefineShapeTag : public ITag, public ICharacter {
-	public:
-		DefineShapeTag( TagHeader& h )
-			:ITag( h )
-            ,_shape_id(0)
-		{
-            _asset.import = false;
-            _asset.handle = 0;
-        }
+//-----------------------------------------------------------------------------
+
+class DefineShapeTag : public ITag, public ICharacter {
+public:
+	DefineShapeTag( TagHeader& h )
+		:ITag( h )
+        ,_shape_id(0)
+	{
+    }
 		
-		virtual ~DefineShapeTag()
-        {
-		}
-		
-		virtual bool read( Reader& reader, SWF&, MovieFrames& data );
-		virtual void print();
-		
-		// override ICharacter function
-        virtual const RECT& getRectangle(void) const { return _bound; }
-		virtual void draw(void);
-		virtual void update(void) {}
-        virtual void play( bool enable ) {}
-		virtual void gotoFrame( uint32_t frame ) {}
-		virtual ICharacter* getTopMost(float localX, float localY);
-		
-		static ITag* create( TagHeader& header );
-		
-	protected:
-		uint16_t		_shape_id;
-        Asset           _asset;
-		RECT			_bound;
-		ShapeWithStyle	_shape_with_style;
-    };
+	virtual ~DefineShapeTag()
+    {
+	}
 	
-}
+	virtual bool read( Reader& reader, SWF&, MovieFrames& data );
+	virtual void print();
+		
+	// override ICharacter function
+    virtual const RECT& getRectangle(void) const { return _bound; }
+	virtual void draw(void);
+	virtual void update(void) {}
+    virtual void play( bool enable ) {}
+	virtual void gotoFrame( uint32_t frame ) {}
+	virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest);
+		
+	static ITag* create( TagHeader& header );
+	
+protected:
+	uint16_t		_shape_id;
+	RECT			_bound;
+	ShapeWithStyle	_shape_with_style;
+};
+	
+//-----------------------------------------------------------------------------
+
+} //namespace
+
 #endif // __DefineShape_h__

@@ -29,7 +29,7 @@ namespace MonkSWF
 		}
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new DefineSoundTag( header ));
+			return new DefineSoundTag( header );
 		}				
     };
 
@@ -80,7 +80,7 @@ namespace MonkSWF
         }
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new StartSoundTag( header ));
+			return new StartSoundTag( header );
 		}				
     };
 }	

@@ -85,7 +85,7 @@ namespace MonkSWF
 		}
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new DefineButtonTag( header ));
+			return new DefineButtonTag( header );
 		}				
     };
 
@@ -119,7 +119,7 @@ namespace MonkSWF
 		const RECT& getRectangle(void) const { return _bound; }
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new DefineButton2Tag( header ));
+			return new DefineButton2Tag( header );
 		}				
     };
 
@@ -144,7 +144,7 @@ namespace MonkSWF
 		virtual void update(void);
         virtual void play( bool enable );
 		virtual void gotoFrame( uint32_t frame );
-		virtual ICharacter* getTopMost(float localX, float localY);
+		virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest);
 
 		virtual void onEvent(Event::Code);
 

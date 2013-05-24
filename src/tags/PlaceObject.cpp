@@ -62,14 +62,15 @@ bool PlaceObjectTag::read( Reader& reader, SWF& swf, MovieFrames& data )
 			
 	if ( _has_matrix ) {
 		reader.getMatrix( _transform );
+        reader.align();
 	} else {
         _transform = kMatrixIdentity;
     }
 		
     _cxform = kCXFormIdentity;
 	if ( has_color_transform ) {
-        reader.align();
 		reader.getCXForm( _cxform );
+        reader.align();
     }
 		
 	if ( has_ratio ) {
@@ -78,7 +79,6 @@ bool PlaceObjectTag::read( Reader& reader, SWF& swf, MovieFrames& data )
 		reader.get<uint16_t>();
 	}
 	if ( has_name ) {
-        reader.align();
         _name.assign( reader.getString() );
 	}
 	if ( has_clip_depth ) {
@@ -215,7 +215,9 @@ void PlaceObjectTag::setup(MovieClip& movie)
 	case MOVE:
 		// The character at the specified depth is modified. Other fields modify the attributes of this
 		// character. Because any given depth can have only one character, no CharacterId is required.
-		MK_ASSERT(current_obj);
+		//MK_ASSERT(current_obj);
+		if (! current_obj)
+			break;
 		//current_obj->copyTransform( place_obj );
 		//place_obj->setCharacterId( current_obj->characterId() );
 		if ( this->hasMatrix() == false ) {

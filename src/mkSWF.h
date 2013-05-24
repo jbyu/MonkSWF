@@ -24,67 +24,63 @@ using namespace std;
 
 namespace MonkSWF {
 
-//=========================================================================
+//-----------------------------------------------------------------------------
+class FillStyle;
 
-    class Renderer
-    {
-        static Renderer     *spRenderer;
+class Renderer
+{
+    static Renderer     *spRenderer;
 
-    public:
-        virtual ~Renderer() { clear(); }
+public:
+    virtual ~Renderer() { clear(); }
 
-        virtual void applyTransform( const MATRIX3f& mtx ) = 0;
-        virtual void drawQuad(const RECT& rect, const CXFORM&, unsigned int texture) = 0;
-        virtual void drawImportAsset(const RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle) = 0;
+    virtual void applyTransform( const MATRIX3f& mtx ) = 0;
 
-        virtual void drawBegin(void) = 0;
-        virtual void drawEnd(void) = 0;
+	virtual void drawTriangles(const VertexArray& vertices, const CXFORM& cxform, const FillStyle& style, unsigned int texture) = 0;
+	virtual void drawLineStrip(const VertexArray& vertices, const CXFORM& cxform, const LineStyle& style) = 0;
 
-        virtual void createTempTexAssets(void) = 0;
-        virtual void destroyTempTexAssets(void) = 0;
-        virtual void maskBegin(void) = 0;
-        virtual void maskEnd(void) = 0;
-        virtual void maskOffBegin(void) = 0;
-        virtual void maskOffEnd(void) = 0;
+    virtual void drawImportAsset(const RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle) = 0;
 
-        virtual unsigned int getTexture( const char *filename ) = 0;
-        virtual void clear( void ) {}
+    virtual void drawBegin(void) = 0;
+    virtual void drawEnd(void) = 0;
 
-        static Renderer* getRenderer(void) { return spRenderer; }
-        static void setRenderer(Renderer *r) { spRenderer = r; }
-    };
+    virtual void createTempTexAssets(void) = 0;
+    virtual void destroyTempTexAssets(void) = 0;
+    virtual void maskBegin(void) = 0;
+    virtual void maskEnd(void) = 0;
+    virtual void maskOffBegin(void) = 0;
+    virtual void maskOffEnd(void) = 0;
 
-//=========================================================================
-   class Speaker
-   {
-        static Speaker *spSpeaker;
+    virtual void clear( void ) {}
 
-    public:
-        virtual ~Speaker() {}
+    static Renderer* getRenderer(void) { return spRenderer; }
+    static void setRenderer(Renderer *r) { spRenderer = r; }
+};
 
-        virtual unsigned int getSound( const char *filename ) = 0;
-        virtual void playSound( unsigned int sound, bool stop, bool noMultiple, bool loop ) = 0;
+//-----------------------------------------------------------------------------
 
-        static Speaker* getSpeaker(void) { return spSpeaker; }
-        static void setSpeaker(Speaker *r) { spSpeaker = r; }
-   };
+class Speaker
+{
+	static Speaker *spSpeaker;
 
-//=========================================================================
+public:
+    virtual ~Speaker() {}
+
+    virtual unsigned int getSound( const char *filename ) = 0;
+    virtual void playSound( unsigned int sound, bool stop, bool noMultiple, bool loop ) = 0;
+
+    static Speaker* getSpeaker(void) { return spSpeaker; }
+    static void setSpeaker(Speaker *r) { spSpeaker = r; }
+};
+
+//-----------------------------------------------------------------------------
+
 	class SWF : public MovieClip
     {
-/*
-        friend class PlaceObjectTag;
-		virtual void clearDisplayList(void) {
-			MovieClip::clearDisplayList();
-			_mouseButtonStateLast = 0;
-			_mouseInsideEntityLast = false;
-			_pActiveEntity = NULL;
-		}
-*/
     public:
         // factory function prototype
 		typedef ITag* (*TagFactoryFunc)( TagHeader& );
-        typedef uint32_t (*LoadAssetCallback)( const char *name, bool import );
+        typedef Asset (*LoadAssetCallback)( const char *name, bool import );
         typedef void (*GetURLCallback)( MovieClip&, bool isFSCommand, const char *command, const char *target );
 
 		static bool initialize(LoadAssetCallback);
@@ -192,5 +188,8 @@ namespace MonkSWF {
 		static MATRIX3f					_sCurrentMatrix;
 		static CXFORM					_sCurrentCXForm;
 	};
-}
+
+//-----------------------------------------------------------------------------
+
+}//namespace
 #endif // __mkSWF_h__

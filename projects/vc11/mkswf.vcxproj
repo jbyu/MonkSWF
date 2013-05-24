@@ -53,6 +53,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SWF_DEBUG;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\src</AdditionalIncludeDirectories>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -81,6 +82,13 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\poly2tri\common\shapes.h" />
+    <ClInclude Include="..\..\poly2tri\common\utils.h" />
+    <ClInclude Include="..\..\poly2tri\poly2tri.h" />
+    <ClInclude Include="..\..\poly2tri\sweep\advancing_front.h" />
+    <ClInclude Include="..\..\poly2tri\sweep\cdt.h" />
+    <ClInclude Include="..\..\poly2tri\sweep\sweep.h" />
+    <ClInclude Include="..\..\poly2tri\sweep\sweep_context.h" />
     <ClInclude Include="..\..\src\mkCommon.h" />
     <ClInclude Include="..\..\src\mkHeader.h" />
     <ClInclude Include="..\..\src\mkMovieClip.h" />
@@ -100,8 +108,14 @@
     <ClInclude Include="..\..\src\tags\PlaceObject.h" />
     <ClInclude Include="..\..\src\tags\RemoveObject.h" />
     <ClInclude Include="..\..\src\tags\ShowFrame.h" />
+    <ClInclude Include="..\..\src\tags\VectorEngine.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\poly2tri\common\shapes.cc" />
+    <ClCompile Include="..\..\poly2tri\sweep\advancing_front.cc" />
+    <ClCompile Include="..\..\poly2tri\sweep\cdt.cc" />
+    <ClCompile Include="..\..\poly2tri\sweep\sweep.cc" />
+    <ClCompile Include="..\..\poly2tri\sweep\sweep_context.cc" />
     <ClCompile Include="..\..\src\mkHeader.cpp" />
     <ClCompile Include="..\..\src\mkMovieClip.cpp" />
     <ClCompile Include="..\..\src\mkReader.cpp" />
@@ -112,6 +126,7 @@
     <ClCompile Include="..\..\src\tags\DefineSprite.cpp" />
     <ClCompile Include="..\..\src\tags\DoAction.cpp" />
     <ClCompile Include="..\..\src\tags\PlaceObject.cpp" />
+    <ClCompile Include="..\..\src\tags\VectorEngine.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

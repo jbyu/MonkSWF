@@ -68,7 +68,7 @@ namespace MonkSWF {
 		}
 		
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new RemoveObjectTag( header ));
+			return new RemoveObjectTag( header );
 		}				
 	};
 	

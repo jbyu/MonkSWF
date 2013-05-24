@@ -35,7 +35,7 @@ namespace MonkSWF
 		}
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new ExportAssetsTag( header ));
+			return new ExportAssetsTag( header );
 		}				
     };
 

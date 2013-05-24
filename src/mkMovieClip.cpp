@@ -35,48 +35,48 @@ bool MovieClip::createFrames( Reader& reader, SWF& swf, MovieFrames &data )
 	data._rectangle = empty;
 	sbCalculateRectangle = true;
 
-	ITag* tag = NULL;
-	// get the first tag
-    TagHeader header;
-	header.read( reader );
 	// get all tags and build frame lists
+    TagHeader header;
+	ITag* tag = NULL;
 	TagList* frame_tags = new TagList;
-	while( header.code() != TAG_END ) { // while not the end tag 
+	do {
+		header.read( reader );
         const uint32_t code = header.code();
 		SWF::TagFactoryFunc factory = SWF::getTagFactory( code );
-		if ( factory ) {
-			tag = factory( header );
-
-			int32_t end_pos = reader.getCurrentPos() + tag->length();
-			bool keepTag = tag->read( reader, swf, data );
-			tag->print();
-			reader.align();
-
-			int32_t dif = end_pos - reader.getCurrentPos();
-			if( dif != 0 ) {
-				MK_TRACE("WARNING: tag not read correctly. trying to skip.\n");
-				reader.skip( dif );
-			}
-
-            if (keepTag) {
-                frame_tags->push_back( tag );
-            } else {
-                delete tag;
-            }
-
-            // create a new frame
-            if ( TAG_SHOW_FRAME == code ) {
-				data._frames.push_back( frame_tags );
-				frame_tags = new TagList;
-				sbCalculateRectangle = false;
-            }
-		} else { // no registered factory so skip this tag
+		if (! factory ) {
+			// no registered factory so skip this tag
 			MK_TRACE("*** SKIP *** ");
 			header.print();
 			reader.skip( header.length() );
+			continue;
 		}
-		header.read( reader );
-	}
+		tag = factory( header );
+		MK_ASSERT(tag);
+
+		int32_t end_pos = reader.getCurrentPos() + tag->length();
+		bool keepTag = tag->read( reader, swf, data );
+		tag->print();
+		reader.align();
+
+		int32_t dif = end_pos - reader.getCurrentPos();
+		if( dif != 0 ) {
+			MK_TRACE("WARNING: tag not read correctly. trying to skip.\n");
+			reader.skip( dif );
+		}
+
+        if (keepTag) {
+            frame_tags->push_back( tag );
+        } else {
+            delete tag;
+        }
+
+        // create a new frame
+        if ( TAG_SHOW_FRAME == code ) {
+			data._frames.push_back( frame_tags );
+			frame_tags = new TagList;
+			sbCalculateRectangle = false;
+        }
+	} while( header.code() != TAG_END );
 	delete frame_tags;
     return true;
 }
@@ -201,6 +201,16 @@ void MovieClip::gotoLabel( const char* label, bool jump )
     }
 }
 
+void MovieClip::gotoAndPlay( uint32_t frame )
+{
+	if (getFrameCount() < frame)
+		frame = 0;
+
+    while (frame != _frame) {
+        step();
+    }
+}
+
 void MovieClip::update(void)
 {
     if (_play)
@@ -275,7 +285,7 @@ void MovieClip::setupFrame(const TagList& tags)
 	}
 }
 
-ICharacter* MovieClip::getTopMost(float x, float y) {
+ICharacter* MovieClip::getTopMost(float x, float y, bool polygonTest) {
 	ICharacter* pRet = NULL;
 	DisplayList::reverse_iterator rit = _display_list.rbegin();
 	while( rit != _display_list.rend() ) {
@@ -287,7 +297,7 @@ ICharacter* MovieClip::getTopMost(float x, float y) {
 			POINTf local, world = {x,y};
 			m.setInverse(pObj->getTransform());
 			m.transform(local, world);
-			pRet = pCharacter->getTopMost(local.x, local.y);
+			pRet = pCharacter->getTopMost(local.x, local.y, polygonTest);
 			if (pRet)
 				break;
 		}

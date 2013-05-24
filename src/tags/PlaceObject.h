@@ -99,7 +99,7 @@ namespace MonkSWF {
 		//bool hasMove()          const { return 0!=_has_move; }
 
 		static ITag* create( TagHeader& header ) {
-			return (ITag*)(new PlaceObjectTag( header ));
+			return new PlaceObjectTag( header );
 		}
 
 	private:

@@ -9,7 +9,7 @@ If your platform does not support OpenVG you can use [MonkVG](https://github.com
 If you are looking to integrate this with your Cocos2D application there is an excellent article by Luke. 
 Check it out: http://blog.zincroe.com/2011/11/displaying-a-swf-on-the-iphone-with-cocos2d-and-monkswf/
 
-In NUBEE edition, MonkSWF is modified for bitmap animation and is not dependent on OpenVG, therefore,
+In OpenGL edition, MonkSWF is modified for bitmap animation and is not dependent on OpenVG, therefore,
 vector rendering is not supported. It also provide features for clipping, audio event and export bitmap filename by assets.
 
 
