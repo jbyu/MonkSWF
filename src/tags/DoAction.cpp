@@ -96,7 +96,8 @@ namespace MonkSWF
                 movie.play(false);
                 break;
             case ACTION_GOTO_FRAME:
-                movie.gotoAndPlay(action.data);
+                //movie.gotoAndPlay(action.data);
+				movie.gotoFrame(action.data);
                 break;
             case ACTION_GOTO_LABEL:
 				movie.gotoLabel(action.buffer, false);

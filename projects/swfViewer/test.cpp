@@ -269,11 +269,11 @@ public:
 		glEnd();
 	}
 
-	void drawTriangles( const MonkSWF::VertexArray& vertices, const MonkSWF::CXFORM& cxform, const MonkSWF::FillStyle& style, unsigned int texture )
+	void drawTriangles( const MonkSWF::VertexArray& vertices, const MonkSWF::CXFORM& cxform, const MonkSWF::FillStyle& style, const MonkSWF::Asset& asset )
     {
 #define PRIMITIVE_MODE	GL_TRIANGLES
 //#define PRIMITIVE_MODE	GL_LINES
-        if (0 == texture) {
+		if (0 == asset.handle) {
 			MonkSWF::COLOR4f color = cxform.mult * style.getColor();
 			color += cxform.add;
 			glDisable(GL_TEXTURE_2D);
@@ -289,7 +289,7 @@ public:
 		}
 
         glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, texture);
+		glBindTexture(GL_TEXTURE_2D, asset.handle);
 		if (style.type() & 0x1) {
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
@@ -332,7 +332,7 @@ public:
 #endif
     }
 
-    void drawImportAsset( const MonkSWF::RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle )
+    void drawImportAsset( const MonkSWF::RECT& rect, const MonkSWF::CXFORM& cxform, const MonkSWF::Asset& asset )
     {
         glDisable(GL_TEXTURE_2D);
         glBegin(GL_QUADS);

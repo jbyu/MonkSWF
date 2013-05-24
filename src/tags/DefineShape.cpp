@@ -395,9 +395,9 @@ bool ShapeWithStyle::triangluate(void) {
 void ShapeWithStyle::draw() {
 	for (MeshArray::iterator it = _meshes.begin(); it != _meshes.end(); ++it) {
 		if (it->_asset.import) {
-			Renderer::getRenderer()->drawImportAsset(it->_bound, SWF::getCurrentCXForm(), it->_asset.handle);
+			Renderer::getRenderer()->drawImportAsset(it->_bound, SWF::getCurrentCXForm(), it->_asset);
 		} else {
-			Renderer::getRenderer()->drawTriangles( it->_vertices, SWF::getCurrentCXForm(), *(it->_style), it->_asset.handle);
+			Renderer::getRenderer()->drawTriangles( it->_vertices, SWF::getCurrentCXForm(), *(it->_style), it->_asset);
 		}
 	}
 	for (LineArray::iterator it = _lines.begin(); it != _lines.end(); ++it) {

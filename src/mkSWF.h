@@ -36,10 +36,10 @@ public:
 
     virtual void applyTransform( const MATRIX3f& mtx ) = 0;
 
-	virtual void drawTriangles(const VertexArray& vertices, const CXFORM& cxform, const FillStyle& style, unsigned int texture) = 0;
+	virtual void drawTriangles(const VertexArray& vertices, const CXFORM& cxform, const FillStyle& style, const Asset& asset) = 0;
 	virtual void drawLineStrip(const VertexArray& vertices, const CXFORM& cxform, const LineStyle& style) = 0;
 
-    virtual void drawImportAsset(const RECT& rect, const MonkSWF::CXFORM& cxform, unsigned int handle) = 0;
+    virtual void drawImportAsset(const RECT& rect, const MonkSWF::CXFORM& cxform, const Asset& asset) = 0;
 
     virtual void drawBegin(void) = 0;
     virtual void drawEnd(void) = 0;
