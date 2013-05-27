@@ -143,7 +143,7 @@ namespace MonkSWF
 		virtual void draw(void);
 		virtual void update(void);
         virtual void play( bool enable );
-		virtual void gotoFrame( uint32_t frame );
+		virtual void gotoFrame( uint32_t frame, bool skipAction );
 		virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest);
 
 		virtual void onEvent(Event::Code);

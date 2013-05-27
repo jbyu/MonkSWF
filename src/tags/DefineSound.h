@@ -72,7 +72,7 @@ namespace MonkSWF
 			MK_TRACE("id=%d, stop:%d, noMultiple:%d, loop:%d\n", _soundId, _syncStop, _noMultiple, _loop);
 		}
 
-        virtual void setup(MovieClip&)
+        virtual void setup(MovieClip&, bool skipAction)
         {
             Speaker *speaker = MonkSWF::Speaker::getSpeaker();
             if (NULL==speaker) return;

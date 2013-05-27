@@ -16,7 +16,7 @@ namespace MonkSWF {
         friend class SWF;
 
     protected:
-		void setupFrame(const TagList& tags);
+		void setupFrame(const TagList& tags, bool skipAction);
 
         void clearDisplayList(void);
 
@@ -36,7 +36,7 @@ namespace MonkSWF {
 
         MATRIX* getTransform(void) { return _transform; }
 
-        void gotoLabel( const char* label, bool jump = false );
+        void gotoLabel( const char* label );
         void gotoAndPlay( uint32_t frame );
 
 		// override ICharacter function
@@ -46,13 +46,13 @@ namespace MonkSWF {
         virtual void play( bool enable ) { 
 			_play = enable; 
 		}
-		virtual void gotoFrame( uint32_t frame );
+		virtual void gotoFrame( uint32_t frame, bool skipAction );
 		virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest);
 
 		uint32_t getCurrentFrame( void ) const { return _frame; }
         uint32_t getFrameCount( void ) const { return _data._frames.size(); }
 
-        void step( int delta = 1 ) { gotoFrame( this->getCurrentFrame() + delta );  }
+		void step( int delta, bool skipAction ) { gotoFrame( this->getCurrentFrame() + delta, skipAction );  }
 
         bool isPlay(void) const { return _play; }
 

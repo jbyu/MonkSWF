@@ -542,7 +542,7 @@ void keyboard(unsigned char key, int x, int y)
     case 's':
         if (gpSWF) 
         {
-            gpSWF->gotoFrame(0xffffffff);
+            gpSWF->gotoFrame(0xffffffff, false);
             gpSWF->play(true);
         }
         break;
@@ -552,7 +552,7 @@ void keyboard(unsigned char key, int x, int y)
         break;
     case 'z':
         if (gpSWF) {
-            gpSWF->step();
+            gpSWF->step(1, false);
             printf("frame[%d]\n",gpSWF->getCurrentFrame());
         }
         break;

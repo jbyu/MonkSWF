@@ -52,7 +52,7 @@ namespace MonkSWF {
 
 		virtual void print();
 
-		virtual void setup(MovieClip&);
+		virtual void setup(MovieClip&, bool skipAction);
 
 		void draw(void);
 
@@ -85,10 +85,10 @@ namespace MonkSWF {
 				_character->play(enable);
 		}
 
-		void gotoFrame(uint32_t frame)
+		void gotoFrame(uint32_t frame, bool skipAction)
 		{
 			if (_character)
-				_character->gotoFrame( frame );
+				_character->gotoFrame( frame,skipAction );
 		}
 
 		uint16_t depth()        const { return _depth; }

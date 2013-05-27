@@ -83,8 +83,10 @@ namespace MonkSWF
 		return true; // keep tag
 	}
 
-    void DoActionTag::setup(MovieClip& movie)
+    void DoActionTag::setup(MovieClip& movie, bool skipAction)
     {
+		if (skipAction)
+			return;
         ActionArray::iterator it = moActions.begin();
         while(moActions.end() != it) {
             const ACTION& action = (*it);
@@ -96,11 +98,10 @@ namespace MonkSWF
                 movie.play(false);
                 break;
             case ACTION_GOTO_FRAME:
-                //movie.gotoAndPlay(action.data);
-				movie.gotoFrame(action.data);
+                movie.gotoAndPlay(action.data);
                 break;
             case ACTION_GOTO_LABEL:
-				movie.gotoLabel(action.buffer, false);
+				movie.gotoLabel(action.buffer);
                 break;
             case ACTION_GET_URL:
                 {
@@ -114,10 +115,11 @@ namespace MonkSWF
                 }
                 break;
             case ACTION_NEXT_FRAME:
-                movie.step();
+				movie.step(1, skipAction);
                 break;
             case ACTION_PREV_FRAME:
-                movie.step(-1);
+				// TODO: reverse frame playback
+				//movie.step(-1, skipAction);
                 break;
 
             default:

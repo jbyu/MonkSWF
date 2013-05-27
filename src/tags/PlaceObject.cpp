@@ -188,7 +188,7 @@ void PlaceObjectTag::print() {
     //MK_TRACE("\tCXFORM-Add: %1.2f,%1.2f,%1.2f,%1.2f\n", _cxform.add.r, _cxform.add.g, _cxform.add.b, _cxform.add.a );
 }
 
-void PlaceObjectTag::setup(MovieClip& movie) 
+void PlaceObjectTag::setup(MovieClip& movie, bool skipAction) 
 {
     DisplayList& _display_list = movie.getDisplayList();
 	const uint16_t depth = this->depth();
@@ -204,7 +204,7 @@ void PlaceObjectTag::setup(MovieClip& movie)
 		// depth. Other fields set the attributes of this new character.
 		// copy over the previous matrix if the new character doesn't have one
 		if ( current_obj && this->hasMatrix() == false ) {
-            current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM);
+			current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM, skipAction);
 			this->copyTransform( current_obj );
 		}
 		_character = movie.getInstance(this);
@@ -231,7 +231,7 @@ void PlaceObjectTag::setup(MovieClip& movie)
 		// The character at the specified Depth is removed, and a new character (with ID of CharacterId) 
 		// is placed at that depth. Other fields set the attributes of this new character.
 		if ( current_obj && this->hasMatrix() == false ) {
-            current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM);
+			current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM, skipAction);
 			this->copyTransform( current_obj );
 		}
 		_character = movie.getInstance(this);

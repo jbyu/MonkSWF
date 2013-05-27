@@ -172,7 +172,7 @@ void MovieClip::clearDisplayList(void)
 	_display_list.clear();
 }
 
-void MovieClip::gotoFrame( uint32_t frame )
+void MovieClip::gotoFrame( uint32_t frame, bool skipAction )
 {
 	if (getFrameCount() <= frame)
 	{
@@ -182,39 +182,31 @@ void MovieClip::gotoFrame( uint32_t frame )
     // build up the display list
 	_frame = frame;
 	TagList* frame_tags = _data._frames[ frame ];
-	setupFrame( *frame_tags );
+	setupFrame( *frame_tags, skipAction );
 }
 
-void MovieClip::gotoLabel( const char* label, bool jump )
+void MovieClip::gotoLabel( const char* label)
 {
     LabelList::const_iterator it = _data._labels.find(label);
     if (_data._labels.end() == it)
         return;
-
-    if (jump) {
-        gotoFrame(it->second);
-        return;
-    }
-
-    while (it->second != _frame) {
-        step();
-    }
+	gotoAndPlay( it->second );
 }
 
 void MovieClip::gotoAndPlay( uint32_t frame )
 {
-	if (getFrameCount() < frame)
-		frame = 0;
-
+	if (frame < _frame) {
+		gotoFrame(ICharacter::kFRAME_MAXIMUM, true);
+	}
     while (frame != _frame) {
-        step();
+        step(1, true);
     }
 }
 
 void MovieClip::update(void)
 {
     if (_play)
-        gotoFrame(_frame + 1);
+        gotoFrame(_frame + 1, false);
 
     // update the display list
 	DisplayList::iterator iter = _display_list.begin();
@@ -274,13 +266,13 @@ void MovieClip::draw(void)
 	}
 }
 
-void MovieClip::setupFrame(const TagList& tags)
+void MovieClip::setupFrame(const TagList& tags, bool skipAction)
 {
     TagList::const_iterator it = tags.begin();
 	while( it != tags.end() )
     {
         ITag* tag = *it;
-        tag->setup(*this);
+		tag->setup(*this, skipAction);
         ++it;
 	}
 }

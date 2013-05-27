@@ -101,7 +101,7 @@ bool SWF::read( Reader& reader ) {
 	createFrames(reader, *this, _swf_data);
 
     MK_ASSERT(getFrameCount() == _header.getFrameCount());
-	this->gotoFrame( 0 );
+	this->gotoFrame( 0, false );
 	return true;
 }
 	

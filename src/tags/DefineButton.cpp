@@ -151,7 +151,7 @@ Button::Button( MovieClip& parent,  DefineButton2Tag& data )
 	ButtonRecordArray::const_iterator it = getDefinition()._buttonRecords.begin();
 	while( getDefinition()._buttonRecords.end() != it) {
 		PlaceObjectTag *object = new PlaceObjectTag( *it );
-		object->setup(*this);
+		object->setup(*this, true);
 		ButtonState state = { it->_state, object };
 		if (it->_state & kButtonStateHitTest) {
 			_buttonHitTests.push_back( state );
@@ -205,13 +205,13 @@ void Button::play(bool enable)
 	}
 }
 
-void Button::gotoFrame(uint32_t frame)
+void Button::gotoFrame(uint32_t frame, bool skipAction)
 {
 	int flag = 1 << _mouseState;
 	StateArray::const_iterator it = _buttonStates.begin();
 	while( _buttonStates.end() != it) {
 		if (it->_state & flag) {
-			it->_object->gotoFrame( frame );
+			it->_object->gotoFrame( frame, skipAction );
 		}
 		++it;
 	}
@@ -254,7 +254,7 @@ void Button::setupFrame(void) {
 	StateArray::const_iterator it = _buttonStates.begin();
 	while( _buttonStates.end() != it) {
 		if (it->_state & flag) {
-			it->_object->setup(*this);
+			it->_object->setup(*this, false);
 		}
 		++it;
 	}
@@ -301,7 +301,7 @@ void Button::onEvent(Event::Code code) {
 	ButtonActionArray::iterator it = getDefinition()._buttonActions.begin();
 	while( getDefinition()._buttonActions.end() != it ) {
 		if ((*it)->_conditions & flag) {
-			(*it)->_actions.setup(_parent);
+			(*it)->_actions.setup(_parent, false);
 		}
 		++it;
 	}

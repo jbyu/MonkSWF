@@ -47,7 +47,7 @@ namespace MonkSWF
             MK_TRACE("\n");
         }
 
-        virtual void setup(MovieClip&);
+        virtual void setup(MovieClip&, bool skipAction);
 
 		static ITag* create( TagHeader& header ) {
 			return new DoActionTag( header );

@@ -187,7 +187,7 @@ public:
 	virtual void draw(void) = 0;
 	virtual void update(void) = 0;
     virtual void play( bool enable ) = 0;
-	virtual void gotoFrame( uint32_t frame ) = 0;
+	virtual void gotoFrame( uint32_t frame, bool skipAction ) = 0;
 	virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest) = 0;
 	virtual void onEvent(Event::Code) {}
 };
@@ -293,7 +293,7 @@ public:
     // return true to keep this tag
 	virtual bool read( Reader& reader, SWF& swf, MovieFrames& data ) = 0;
 	virtual void print() = 0;
-    virtual void setup( MovieClip& ) {}
+	virtual void setup( MovieClip&, bool skipAction ) {};
 
 	inline uint32_t code() const { return _header.code(); }
 	inline int32_t length() const { return _header.length(); }
