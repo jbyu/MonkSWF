@@ -272,13 +272,13 @@ public:
 	void drawTriangles( const MonkSWF::VertexArray& vertices, const MonkSWF::CXFORM& cxform, const MonkSWF::FillStyle& style, const MonkSWF::Asset& asset )
     {
 #define PRIMITIVE_MODE	GL_TRIANGLES
-//#define PRIMITIVE_MODE	GL_LINES
+//#define PRIMITIVE_MODE	GL_POINTS
+		glPointSize(4.f);
 		if (0 == asset.handle) {
 			MonkSWF::COLOR4f color = cxform.mult * style.getColor();
 			color += cxform.add;
 			glDisable(GL_TEXTURE_2D);
 	        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	        glColor4f(color.r, color.g, color.b, color.a);
 			glBegin(PRIMITIVE_MODE);
 			for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {

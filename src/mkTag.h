@@ -241,7 +241,7 @@ public:
 	bool read( Reader* reader, bool support_32bit_color );
 		
 	void print() {
-        MK_TRACE("FILLSTYLE=0x%x, bitmap=%d\n", _type, _bitmap_id);
+        MK_TRACE("FILLSTYLE=0x%x, bitmap=%d, color=[%f,%f,%f,%f]\n", _type, _bitmap_id, _color.r, _color.g, _color.b, _color.a);
 	}
 	
     uint16_t getBitmap(void) const { return _bitmap_id; }

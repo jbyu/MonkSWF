@@ -312,23 +312,24 @@ bool ShapeWithStyle::readShapeRecords( Reader* reader, bool lineStyle2, bool sup
 				} 
 				if( flags & SF_FILL0 ) { 
 					current._fill0 = reader->getbits( num_fill_bits ) - 1 + fill_base;
-					//current.getStart() = start;
+					current.getStart() = start;
 					MK_TRACE("fill0: %d\n", current._fill0);
 				} 
 				if( flags & SF_FILL1 ) {
 					current._fill1 = reader->getbits( num_fill_bits ) - 1 + fill_base;
-					//current.getStart() = start;
+					current.getStart() = start;
 					MK_TRACE("fill1: %d\n", current._fill1);
 				} 
 				if( flags & SF_LINE) { 
 					current._line = reader->getbits( num_line_bits ) - 1 + line_base;
-					//current.getStart() = start;
+					current.getStart() = start;
 					MK_TRACE("line:  %d\n", current._line);
 				} 
 				if( flags & SF_NEWSTYLE ) { 
 					current._fill0 = -1;
 					current._fill1 = -1;
 					current._line = -1;
+					current.getStart() = start;
 					//current._new_shape = true;
 					// get the fill/line styles
 					fill_base = _fill_styles.size();
@@ -376,6 +377,23 @@ bool ShapeWithStyle::readShapeRecords( Reader* reader, bool lineStyle2, bool sup
 	triangluate();
 
 	return true;
+}
+
+bool Path::isClockWise(void) const {
+	float sum = 0;
+	EdgeArray::const_iterator i = _edges.begin();
+	const POINTf* p0 = &_start;
+	const POINTf* p1 = &(i->getAnchor());
+	++i;
+	for ( ; i != _edges.end(); ++i ) {
+		const POINTf* p2 = &(i->getAnchor());
+		POINTf v1 = *p2 - *p1;
+		POINTf v2 = *p1 - *p0;
+		sum += v1.x * v2.y - v2.x * v1.y;
+		p0 = p1;
+		p1 = p2;
+	}
+	return 0 >= sum;
 }
 
 bool ShapeWithStyle::triangluate(void) {

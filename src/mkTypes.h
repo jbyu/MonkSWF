@@ -10,6 +10,8 @@
 #ifndef __mkSWFTypes_h__
 #define __mkSWFTypes_h__
 
+#include <float.h>
+
 namespace MonkSWF {
 
 typedef     signed long     fixed_t;
@@ -123,7 +125,18 @@ struct RECT
 		if (p.y < ymin) ymin = p.y;
 		else if (p.y > ymax) ymax = p.y;
 	}
+
+	bool isInside(const RECT& other) {
+		if ((other.xmax > xmax) &&
+			(other.xmin < xmin) &&
+			(other.ymax > ymax) &&
+			(other.ymin < ymin) )
+			return true;
+		return false;
+	}
 };
+
+const RECT kRectangleInvalidate = { FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX };
 
 inline void MergeRectangle(RECT &rect, const RECT other) {
 	if (other.xmin < rect.xmin)

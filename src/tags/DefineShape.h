@@ -54,11 +54,11 @@ public:
 		,_control(ctrl)
 	{}
 
-	POINTf& getAnchor() {
+	const POINTf& getAnchor() const {
 		return _anchor;
 	}
 
-	POINTf& getControl() {
+	const POINTf& getControl() const {
 		return _control;
 	}
 
@@ -105,6 +105,8 @@ public:
 
 	EdgeArray& getEdges() { return _edges; }
 
+	bool isClockWise(void) const;
+
 	// style indices
 	int _fill0;
 	int _fill1;
@@ -120,6 +122,9 @@ private:
 
 class ShapeWithStyle {
 public:
+	typedef std::vector<FillStyle>	FillStyleArray;
+	typedef std::vector<LineStyle>	LineStyleArray;
+
 	bool read( Reader& reader, SWF&, DefineShapeTag* define_shape_tag );
 	
 	void draw();
@@ -146,6 +151,8 @@ public:
 
 	bool isInside(float x, float y) const;
 
+	const FillStyleArray& getFillStyles(void) const { return _fill_styles; }
+
 private:
 	struct Mesh {
 		FillStyle	*_style;
@@ -161,8 +168,6 @@ private:
 	};
 	typedef std::vector<Mesh>		MeshArray;
 	typedef std::vector<Line>		LineArray;
-	typedef std::vector<FillStyle>	FillStyleArray;
-	typedef std::vector<LineStyle>	LineStyleArray;
 	typedef std::vector<Path>		PathArray;
 
 	FillStyleArray	_fill_styles;
