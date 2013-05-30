@@ -9,8 +9,8 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Poly2Tri">
-      <UniqueIdentifier>{ef36d1f8-fd74-46c5-b1d0-1ba10a2e0528}</UniqueIdentifier>
+    <Filter Include="LibTess2">
+      <UniqueIdentifier>{a5dca7dc-6d26-4e07-ac38-cae77e541364}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -77,26 +77,29 @@
     <ClInclude Include="..\..\src\tags\VectorEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\common\shapes.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\bucketalloc.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\common\utils.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\dict.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\poly2tri.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\geom.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\sweep\advancing_front.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\mesh.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\sweep\cdt.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\priorityq.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\sweep\sweep.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\sweep.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\poly2tri\sweep\sweep_context.h">
-      <Filter>Poly2Tri</Filter>
+    <ClInclude Include="..\..\libtess2\tess.h">
+      <Filter>LibTess2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libtess2\tesselator.h">
+      <Filter>LibTess2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -133,20 +136,26 @@
     <ClCompile Include="..\..\src\tags\VectorEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\poly2tri\common\shapes.cc">
-      <Filter>Poly2Tri</Filter>
+    <ClCompile Include="..\..\libtess2\bucketalloc.c">
+      <Filter>LibTess2</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\poly2tri\sweep\advancing_front.cc">
-      <Filter>Poly2Tri</Filter>
+    <ClCompile Include="..\..\libtess2\dict.c">
+      <Filter>LibTess2</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\poly2tri\sweep\cdt.cc">
-      <Filter>Poly2Tri</Filter>
+    <ClCompile Include="..\..\libtess2\geom.c">
+      <Filter>LibTess2</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\poly2tri\sweep\sweep.cc">
-      <Filter>Poly2Tri</Filter>
+    <ClCompile Include="..\..\libtess2\mesh.c">
+      <Filter>LibTess2</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\poly2tri\sweep\sweep_context.cc">
-      <Filter>Poly2Tri</Filter>
+    <ClCompile Include="..\..\libtess2\priorityq.c">
+      <Filter>LibTess2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libtess2\sweep.c">
+      <Filter>LibTess2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libtess2\tess.c">
+      <Filter>LibTess2</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

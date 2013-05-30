@@ -81,6 +81,8 @@ class Path {
 public:
 	typedef std::vector<Edge>	EdgeArray;
 
+	const static int kINVALID = -1;
+
 	Path()
 		:_fill0( kINVALID )
 		,_fill1( kINVALID )
@@ -132,21 +134,21 @@ public:
 	void addMesh(size_t fill_idx) {
 		MK_ASSERT(0 <= fill_idx && _fill_styles.size() > fill_idx);
 		Mesh mesh = { &_fill_styles[fill_idx], {false,0,{0,0,0,0}}};
-		_meshes.push_back(mesh);
+		_shapes.back()._meshes.push_back(mesh);
 	}
 
 	void addMeshVertex( const POINTf& pt) {
-		_meshes.back()._vertices.push_back(pt);
+		_shapes.back()._meshes.back()._vertices.push_back(pt);
 	}
 
 	void addLine(size_t line_idx) {
 		MK_ASSERT(0 <= line_idx && _line_styles.size() > line_idx);
 		Line l = { &_line_styles[line_idx] };
-		_lines.push_back(l);
+		_shapes.back()._lines.push_back(l);
 	}
 
 	void addLineVertex( const POINTf& pt) {
-		_lines.back()._vertices.push_back(pt);
+		_shapes.back()._lines.back()._vertices.push_back(pt);
 	}
 
 	bool isInside(float x, float y) const;
@@ -154,6 +156,10 @@ public:
 	const FillStyleArray& getFillStyles(void) const { return _fill_styles; }
 
 private:
+	struct Line {
+		LineStyle	*_style;
+		VertexArray	_vertices;
+	};
 	struct Mesh {
 		FillStyle	*_style;
 		Asset		_asset;
@@ -162,19 +168,20 @@ private:
 
 		bool isInsideMesh(const POINTf& pt) const;
 	};
-	struct Line {
-		LineStyle	*_style;
-		VertexArray	_vertices;
-	};
 	typedef std::vector<Mesh>		MeshArray;
 	typedef std::vector<Line>		LineArray;
+
+	struct Shape {
+		MeshArray		_meshes;
+		LineArray		_lines;
+	};
+	typedef std::vector<Shape>		ShapeArray;
 	typedef std::vector<Path>		PathArray;
 
 	FillStyleArray	_fill_styles;
 	LineStyleArray	_line_styles;		
 	PathArray		_paths;
-	MeshArray		_meshes;
-	LineArray		_lines;
+	ShapeArray		_shapes;
 
 	bool readStyles(Reader* reader, bool lineStyle2, bool support_32bit_color);
 

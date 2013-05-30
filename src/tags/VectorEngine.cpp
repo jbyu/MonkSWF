@@ -1,6 +1,11 @@
+#include "mkSWF.h"
 #include "VectorEngine.h"
 #include "DefineShape.h"
-#include "..\poly2tri\poly2tri.h"
+#include <algorithm>
+#include "..\libtess2\tesselator.h"
+
+// Curve subdivision error tolerance.
+float MonkSWF::SWF::curve_error_tolerance = 4.0f;
 
 namespace triangulation {
 
@@ -8,35 +13,29 @@ using namespace MonkSWF;
 
 struct Collector;
 
-typedef std::vector<p2t::Point>		PointDataArray;
-typedef std::vector<p2t::Point*>	PointRefArray;
-typedef std::vector<p2t::Triangle*> TriangleRefArray;
-typedef std::vector<Collector*>		CollectorArray;
+typedef std::vector<Collector*> CollectorArray;
+typedef std::vector<POINTf>	PointDataArray;
 
-// Curve subdivision error tolerance.
-static float s_tolerance = 4.0f;
-static CollectorArray		s_collectors;
-static POINTf				s_last_point;
+static CollectorArray	s_collectors;
+static POINTf			s_last_point;
 
 const float SWF_EPSILON = 0.1f;
 
-inline bool overlap(const p2t::Point* p, const p2t::Point* q) {
-	if( (fabs( p->x - q->x ) < SWF_EPSILON) && 
-		(fabs( p->y - q->y ) < SWF_EPSILON) )
+inline bool overlap(const POINTf& p, const POINTf& q) {
+	if( (fabs( p.x - q.x ) < SWF_EPSILON) && 
+		(fabs( p.y - q.y ) < SWF_EPSILON) )
 		return true;
 	return false;
 }
 
 //-----------------------------------------------------------------------------
 
-struct Collector
-{
+struct Collector {
 	Collector()
-		:_left_style(kINVALID)
-		,_right_style(kINVALID)
-		,_line_style(kINVALID)
+		:_left_style(Path::kINVALID)
+		,_right_style(Path::kINVALID)
+		,_line_style(Path::kINVALID)
 		,_closed(false)
-		,_clockwise(false)
 	{
 		_bound = kRectangleInvalidate;
 	}
@@ -46,7 +45,6 @@ struct Collector
 		,_right_style(right_style)
 		,_line_style(line_style)
 		,_closed(false)
-		,_clockwise(false)
 	{
 		_bound = kRectangleInvalidate;
 	}
@@ -55,43 +53,16 @@ struct Collector
 	int _right_style;
 	int _line_style;
 	bool _closed;
-	bool _clockwise;
 	RECT _bound;
 
-	CollectorArray	_holes;
 	PointDataArray	_points;
-	PointRefArray	_polyline;
 
 	bool checkClosed(void) const {
-		if (_closed || _right_style == kINVALID || _polyline.size() == 0) 
+		if (_closed || _right_style == Path::kINVALID || _points.size() == 0) 
 			return true;
 		return false;
 	}
-#if 0
-	void cleanEdges(void) {
-		for (PointRefArray::iterator e = _polyline.begin(); e != _polyline.end(); ++e) 
-			(*e)->edge_list.clear();
-	}
-	bool isClockWise(void) const {
-		MK_ASSERT( 1 < _points.size() );
-		float sum = 0;
-		PointDataArray::const_iterator i = _points.begin();
-		const p2t::Point* p0 = &(*i++);
-		const p2t::Point* p1 = &(*i++);
-		for ( ; i != _points.end(); ++i ) {
-			const p2t::Point* p2 = &(*i);
-			POINTf v1,v2;
-			v1.x = p2->x - p1->x;
-			v1.y = p2->y - p1->y;
-			v2.x = p1->x - p0->x;
-			v2.y = p1->y - p0->y;
-			sum += v1.x * v2.y - v2.x * v1.y;
-			p0 = p1;
-			p1 = p2;
-		}
-		return 0 > sum;
-	}
-#endif
+
 };
 
 //-----------------------------------------------------------------------------
@@ -117,8 +88,8 @@ void add_line_segment(const POINTf& pt)
 // Add a line running from the previous anchor point to the
 // given new anchor point.
 {
-	s_collectors.back()->_points.push_back( p2t::Point( pt.x, pt.y) ); // collect points
-	s_collectors.back()->_bound.addPoint(pt); // update boundary
+	s_collectors.back()->_points.push_back( pt ); // collect points
+	s_collectors.back()->_bound.addPoint( pt ); // update boundary
 	s_last_point = pt;
 }
 
@@ -138,7 +109,7 @@ static void	curve(const POINTf& p0, const POINTf& p1, const POINTf& p2)
 	POINTf sample = (mid + p1) * 0.5f;
 
 	mid -= sample;
-	if (mid.magnitude() < s_tolerance) {
+	if (mid.magnitude() < SWF::curve_error_tolerance) {
 		add_line_segment(p2);
 	} else {
 		// Error is too large; subdivide.
@@ -161,7 +132,7 @@ void begin_path(Path& path)
 // the integral ID of the style for filling, to the left or right.
 {
 	Collector *set = new Collector(path._fill0, path._fill1, path._line);
-	set->_clockwise = path.isClockWise();
+	//set->_clockwise = path.isClockWise();
 	s_collectors.push_back(set);
 	add_line_segment( path.getStart() );
 }
@@ -184,68 +155,49 @@ void end_path(MonkSWF::ShapeWithStyle& shape)
 // Mark the end of a set of edges that all use the same styles.
 {
 	Collector& it = *(s_collectors.back());
-	//it._clockwise = it.isClockWise();
 
 	// copy points to line vertices
-	if (it._line_style > kINVALID && it._points.size() > 1) {
+	if (it._line_style > Path::kINVALID && it._points.size() > 1) {
 		MK_TRACE("add LINE: %d vertices\n", it._points.size());
 		shape.addLine(it._line_style);
 		for (PointDataArray::iterator pt = it._points.begin(); pt != it._points.end(); ++pt) {
-			POINTf vtx = {pt->x, pt->y};
-			shape.addLineVertex( vtx );
+			shape.addLineVertex( *pt );
 		}
 	}
 
 	// Convert left-fill paths into new right-fill paths,
 	// so we only have to deal with right-fill below.
-	if (kINVALID == it._right_style) {
-		if (kINVALID == it._left_style) {
+	if (Path::kINVALID == it._right_style) {
+		if (Path::kINVALID == it._left_style) {
 			return;
 		}
-		//it._hole = true;
-		it._clockwise = !it._clockwise;
+		//it._clockwise = !it._clockwise;
 		it._right_style = it._left_style;
-		it._left_style = kINVALID;
-		// gather points for polyline in reverse order
-		for (PointDataArray::reverse_iterator pt = it._points.rbegin(); pt != it._points.rend(); ++pt) {
-			it._polyline.push_back( &(*pt) );
-		}
+		it._left_style = Path::kINVALID;
+		// gather points in reverse order
+		std::reverse(it._points.begin(), it._points.end());
 	} else {
-		// gather points for polyline in normal order
-		for (PointDataArray::iterator pt = it._points.begin(); pt != it._points.end(); ++pt) {
-			it._polyline.push_back( &(*pt) );
-		}
-		if (kINVALID == it._left_style) {
+		if (Path::kINVALID == it._left_style) {
 			return;
 		}
-		if (it._left_style == it._right_style) {
-			// TODO: add steiner points
-			return;
-		}
-		s_collectors.push_back( new Collector(kINVALID, it._left_style, it._line_style) );
+		//if (it._right_style == it._left_style) return;
+
+		s_collectors.push_back( new Collector(Path::kINVALID, it._left_style, it._line_style) );
 		Collector &clone = *(s_collectors.back());
-		//clone._hole = true;
-		clone._clockwise = !it._clockwise;
+		//clone._clockwise = !it._clockwise;
 		clone._bound = it._bound;
-		clone._points = it._points; // duplicate points
-		it._left_style = kINVALID;
-		// gather points for polyline in reverse order
-		for (PointDataArray::reverse_iterator pt = clone._points.rbegin(); pt != clone._points.rend(); ++pt) {
-			clone._polyline.push_back( &(*pt) );
-		}
+		it._left_style = Path::kINVALID;
+		clone._points.assign(it._points.rbegin(), it._points.rend());
 	}
 }//end_path()
 
 //-----------------------------------------------------------------------------
 
-void begin_shape(float curve_error_tolerance) {
+void begin_shape(void) {
 	// ensure we're not already in a shape or path.
 	// make sure our shape state is cleared out.
 	MK_ASSERT(s_collectors.size() == 0);
-	MK_ASSERT(curve_error_tolerance > 0);
-	if (curve_error_tolerance > 0) {
-		s_tolerance = curve_error_tolerance;
-	}
+	MK_ASSERT(SWF::curve_error_tolerance > 0);
 }
 
 void add_collector(MonkSWF::ShapeWithStyle& shape, MonkSWF::Path& path) {
@@ -257,134 +209,6 @@ void add_collector(MonkSWF::ShapeWithStyle& shape, MonkSWF::Path& path) {
 	end_path(shape);
 }
 
-#if 0
-
-// Return true if we did any work.
-bool try_to_combine_path(Collector* pp)
-{
-	if ( pp->checkClosed() ) {
-		return false;
-	}
-
-	if (overlap( pp->_polyline.back(), pp->_polyline.front() ) ) {
-		pp->_polyline.pop_back();
-		pp->_closed = true;
-		return true;
-	}
-
-	// Look for another unclosed path of the same style,
-	// which could join our begin or end point.
-	const int style = pp->_right_style;
-	for (CollectorArray::iterator it = s_collectors.begin(); it != s_collectors.end(); ++it) {
-		Collector* po = (*it);
-		if ( pp == po )
-			continue;
-		if ( po->checkClosed() ) 
-			continue;
-		if ( style != po->_right_style )
-			continue;
-
-		// Can we join?
-		PointRefArray::iterator pStart = pp->_polyline.begin();
-		PointRefArray::iterator oStart = po->_polyline.begin();
-		if (overlap( *oStart, pp->_polyline.back() ) ) {
-			// Yes, po can be appended to pp.
-			pp->_polyline.insert( pp->_polyline.end(), ++oStart, po->_polyline.end());
-			po->_right_style = kINVALID;
-			return true;
-		} else if (overlap( *pStart, po->_polyline.back() ) ) {
-			// Yes, pp can be appended to po.
-			po->_polyline.insert( po->_polyline.end(), ++pStart, pp->_polyline.end());
-			pp->_right_style = kINVALID;
-			return true;
-		}
-	}
-
-	return false;
-}
-	
-//-----------------------------------------------------------------------------
-
-void end_shape(MonkSWF::ShapeWithStyle& shape) {
-	// Join path_parts together into closed paths.
-	while (1) {
-		bool did_work = false;
-		for (CollectorArray::iterator it = s_collectors.begin(); it != s_collectors.end(); ++it) {
-			if (try_to_combine_path( (*it) )) {
-				did_work = true;
-				break;
-			}
-		}
-		if (did_work == false) {
-			break;
-		}
-	}
-		
-	// Triangulate and emit.
-	for (CollectorArray::iterator it = s_collectors.begin(); it != s_collectors.end(); ++it) {
-		Collector* pp = (*it);
-		if (NULL == pp ||
-			false == pp->_closed ||
-			true == pp->_hole ||
-			kINVALID == pp->_right_style ||
-			0 == pp->_polyline.size() )
-			continue;
-		
-		// add a new mesh
-		shape.addMesh(pp->_right_style);
-
-		// clean edges info of shared points
-		for (PointRefArray::iterator e = pp->_polyline.begin(); e != pp->_polyline.end(); ++e) {
-			(*e)->edge_list.clear();
-		}
-		// allocate a triangulator
-		p2t::CDT* cdt = new p2t::CDT(pp->_polyline);
-
-		// add holes
-		const int style = pp->_right_style;
-		for (CollectorArray::iterator oit = s_collectors.begin(); oit != s_collectors.end(); ++oit) {
-			Collector* po = (*oit);
-			if (NULL == po ||
-				pp == po ||
-				false == po->_closed ||
-				true != po->_hole ||
-				style != po->_right_style )
-				continue;
-
-			// clean edges info of shared points
-			for (PointRefArray::iterator e = po->_polyline.begin(); e != po->_polyline.end(); ++e) {
-				(*e)->edge_list.clear();
-			}
-			cdt->AddHole(po->_polyline);
-		}
-		// process
-		cdt->Triangulate();
-
-		// TODO: convert to triangle-strip
-		TriangleRefArray triangles = cdt->GetTriangles();
-		MK_TRACE("add MESH [fill:%d]: %d triangles\n", pp->_right_style, triangles.size());
-
-		for (TriangleRefArray::iterator it = triangles.begin(); it != triangles.end(); ++it) {
-			p2t::Triangle* tri = *it;
-			for (int i = 0; i < 3; ++i) {
-				POINTf pt = {tri->GetPoint(i)->x, tri->GetPoint(i)->y};
-				shape.addMeshVertex(pt);
-			}
-			MK_TRACE("triangle:[%.2f,%.2f],[%.2f,%.2f],[%.2f,%.2f]\n",
-				tri->GetPoint(0)->x, tri->GetPoint(0)->y,
-				tri->GetPoint(1)->x, tri->GetPoint(1)->y,
-				tri->GetPoint(2)->x, tri->GetPoint(2)->y);
-		}
-		// free the triangulator
-		delete cdt;
-	}
-	// clean memory
-	for (CollectorArray::iterator it = s_collectors.begin(); it != s_collectors.end(); ++it) {
-		delete (*it);
-	}
-	s_collectors.clear();
-}
-#else
 //-----------------------------------------------------------------------------
 
 CollectorArray::iterator find_connecting( CollectorArray::iterator& target, CollectorArray& input )
@@ -395,9 +219,9 @@ CollectorArray::iterator find_connecting( CollectorArray::iterator& target, Coll
 		return ret;
 	}
 
-	if (overlap( pp->_polyline.back(), pp->_polyline.front() ) ) {
+	if (overlap( pp->_points.back(), pp->_points.front() ) ) {
 		// poly2tri only accept polyline with non repeating points
-		pp->_polyline.pop_back();
+		pp->_points.pop_back();
 		pp->_closed = true;
 		return ret;
 	}
@@ -412,19 +236,19 @@ CollectorArray::iterator find_connecting( CollectorArray::iterator& target, Coll
 			continue;
 
 		// Can we join?
-		PointRefArray::iterator pStart = pp->_polyline.begin();
-		PointRefArray::iterator oStart = po->_polyline.begin();
-		if (overlap( *oStart, pp->_polyline.back() ) ) {
+		PointDataArray::iterator pStart = pp->_points.begin();
+		PointDataArray::iterator oStart = po->_points.begin();
+		if (overlap( *oStart, pp->_points.back() ) ) {
 			// Yes, po can be appended to pp.
-			pp->_polyline.insert( pp->_polyline.end(), ++oStart, po->_polyline.end());
-			po->_right_style = kINVALID;
+			pp->_points.insert( pp->_points.end(), ++oStart, po->_points.end());
+			po->_right_style = Path::kINVALID;
 			MergeRectangle(pp->_bound, po->_bound);
 			ret = it; // remove this iterator and restart 
 			return ret;
-		} else if (overlap( *pStart, po->_polyline.back() ) ) {
+		} else if (overlap( *pStart, po->_points.back() ) ) {
 			// Yes, pp can be appended to po.
-			po->_polyline.insert( po->_polyline.end(), ++pStart, pp->_polyline.end());
-			pp->_right_style = kINVALID;
+			po->_points.insert( po->_points.end(), ++pStart, pp->_points.end());
+			pp->_right_style = Path::kINVALID;
 			MergeRectangle(po->_bound, pp->_bound);
 			ret = target; // remove this iterator and restart 
 			return ret;
@@ -449,8 +273,8 @@ void get_contours_and_holes( CollectorArray& input ) {
 		if (false == found_connection)
 			break;
 	}
-
-	// find holes
+#if 0
+	// find holes and interior points
 	while (1) {
 		bool found = false;
 		for (CollectorArray::iterator i = input.begin(); i != input.end(); ++i) {
@@ -459,6 +283,14 @@ void get_contours_and_holes( CollectorArray& input ) {
 				Collector* cB = *j;
 				if ( cA == cB )	// don't check against self
 					continue;
+
+				if (!cA->_interior && cB->_interior) {
+					cA->_steiner_points.push_back(cB);
+					input.erase(j);
+					found = true;
+					break;
+				}
+
 				// inner has to be counter direction to outer
 				if ( cA->_clockwise == cB->_clockwise ) 
 					continue;
@@ -476,50 +308,154 @@ void get_contours_and_holes( CollectorArray& input ) {
 		if (false == found)
 			break;
 	}
+#endif
 }
 
-bool create_mesh( MonkSWF::ShapeWithStyle& shape, Collector* pp ) {
-	if (NULL == pp ||
-		false == pp->_closed ||
-		kINVALID == pp->_right_style ||
-		0 == pp->_polyline.size() )
-		return false;
-		
-	// add a new mesh
-	shape.addMesh(pp->_right_style);
-	// clean edges info of shared points
-	//pp->cleanEdges();
-	// allocate a triangulator
-	p2t::CDT* cdt = new p2t::CDT(pp->_polyline);
-	// add holes
-	const int style = pp->_right_style;
-	for (CollectorArray::iterator oit = pp->_holes.begin(); oit != pp->_holes.end(); ++oit) {
-		Collector* po = (*oit);
-		if (NULL == po || pp == po)
-			continue;
-		// clean edges info of shared points
-		//po->cleanEdges();
-		cdt->AddHole(po->_polyline);
-	}
-	// process
-	cdt->Triangulate();
+void* stdAlloc(void* userData, unsigned int size) {
+	int* allocated = ( int*)userData;
+	*allocated += (int)size;
+	return malloc(size);
+}
+void stdFree(void* userData, void* ptr) {
+	free(ptr);
+}
 
-	// TODO: convert to triangle-strip
-	TriangleRefArray triangles = cdt->GetTriangles();
-	MK_TRACE("add MESH [fill:%d]: %d triangles\n", pp->_right_style, triangles.size());
-	for (TriangleRefArray::iterator it = triangles.begin(); it != triangles.end(); ++it) {
-		p2t::Triangle* tri = *it;
-		for (int i = 0; i < 3; ++i) {
-			POINTf pt = {tri->GetPoint(i)->x, tri->GetPoint(i)->y};
-			shape.addMeshVertex(pt);
-		}
-		MK_TRACE("triangle:[%.2f,%.2f],[%.2f,%.2f],[%.2f,%.2f]\n",
-			tri->GetPoint(0)->x, tri->GetPoint(0)->y,
-			tri->GetPoint(1)->x, tri->GetPoint(1)->y,
-			tri->GetPoint(2)->x, tri->GetPoint(2)->y);
+struct MemoryPool {
+	unsigned char* buffer;
+	unsigned int capacity;
+	unsigned int size;
+};
+typedef std::vector<MemoryPool> MemoryPoolArray;
+
+static MemoryPoolArray svMemoryPools;
+
+void* poolAlloc( void* userData, unsigned int size ) {
+	MemoryPool* pool = &svMemoryPools.back();
+	if (pool->size + size > pool->capacity) {
+		MemoryPool newPool;
+		const int capacity = pool->capacity;
+		newPool.buffer = new unsigned char[capacity];
+		newPool.capacity = capacity;
+		newPool.size = 0;
+		svMemoryPools.push_back(newPool);
+		pool = &svMemoryPools.back();
+		MK_TRACE("*** reallocate memory pool: %.1f kB\n", capacity/1024.f);
 	}
+	if (userData) {
+		int* allocated = (int*)userData;
+		*allocated += size;
+	}
+	unsigned char* ptr = pool->buffer + pool->size;
+	pool->size += size;
+	return ptr;
+}
+
+void poolFree( void* userData, void* ptr ) {
+	// empty
+}
+
+void reset_memory_pool(void) {
+	MemoryPoolArray::iterator start = svMemoryPools.begin();
+	if (svMemoryPools.end() == start)
+		return;
+
+	start->size = 0;
+	MemoryPoolArray::reverse_iterator rit = svMemoryPools.rbegin();
+	while (rit->buffer != start->buffer) {
+		delete [] rit->buffer;
+		svMemoryPools.pop_back();
+		rit = svMemoryPools.rbegin();
+	}
+}
+
+void create_memory_pool(int size) {
+	MK_ASSERT(0 == svMemoryPools.size());
+	if (0 == size)
+		return;
+	svMemoryPools.resize(1);
+	MemoryPool& pool = svMemoryPools.back();
+	pool.buffer = new unsigned char[size];
+	pool.capacity = size;
+	pool.size = 0;
+}
+
+void destroy_memory_pool(void) {
+	for (MemoryPoolArray::iterator it = svMemoryPools.begin(); it != svMemoryPools.end(); ++it) {
+		delete it->buffer;
+	}
+	svMemoryPools.clear();
+}
+
+bool create_mesh( MonkSWF::ShapeWithStyle& shape, const CollectorArray& contours, int style ) {
+	reset_memory_pool();
+
+	TESSalloc ma;
+	TESStesselator* tess = 0;
+	int allocated = 0;
+	memset(&ma, 0, sizeof(ma));
+	ma.userData = (void*)&allocated;
+	ma.extraVertices = 256; // realloc not provided, allow 256 extra vertices.
+	if (0 < svMemoryPools.size()) {
+		ma.memalloc = poolAlloc;
+		ma.memfree = poolFree;
+	} else {
+		ma.memalloc = stdAlloc;
+		ma.memfree = stdFree;
+	}
+
+	// allocate a triangulator
+	tess = tessNewTess(&ma);
+	if (! tess)
+		return false;
+
+	// add a new mesh
+	shape.addMesh(style);
+
+	const int kMaximumVerticesPerPolygons = 8;
+	const int kNumberCoordinatePerVertex = 2;
+	for (CollectorArray::const_iterator oit = contours.begin(); oit != contours.end(); ++oit) {
+		Collector* po = (*oit);
+		if (NULL == po)
+			continue;
+		tessAddContour(tess, kNumberCoordinatePerVertex, &(po->_points.front()), sizeof(POINTf), po->_points.size());
+	}
+
+	// process
+	if (!tessTesselate(tess, TESS_WINDING_POSITIVE, TESS_POLYGONS, kMaximumVerticesPerPolygons, kNumberCoordinatePerVertex, NULL))
+		return false;
+	MK_TRACE("Memory used: %.1f kB\n", allocated/1024.f);
+
+	if (! tess)
+		return false;
+
+	const float* verts = tessGetVertices(tess);
+	const int* vinds = tessGetVertexIndices(tess);
+	const int nverts = tessGetVertexCount(tess);
+	const int* elems = tessGetElements(tess);
+	const int nelems = tessGetElementCount(tess);
+	
+	// TODO: convert to triangle-strip
+	int count = 0;
+	MK_TRACE("add MESH [fill:%d]: %d elements, ", style, nelems);
+	for (int i = 0; i < nelems; ++i) {
+		const int* p = &elems[i * kMaximumVerticesPerPolygons];
+
+		POINTf p0 = {verts[p[0]*2], verts[p[0]*2+1]};
+		POINTf p1 = {verts[p[1]*2], verts[p[1]*2+1]};
+		for (int j = 2; j < kMaximumVerticesPerPolygons && p[j] != TESS_UNDEF; ++j) {
+			POINTf p2 = {verts[p[j]*2], verts[p[j]*2+1]};
+			shape.addMeshVertex( p0 );
+			shape.addMeshVertex( p1 );
+			shape.addMeshVertex( p2 );
+			p1 = p2;
+			++count;
+		}
+	}
+	MK_TRACE("%d triangles\n", count);
+
 	// free the triangulator
-	delete cdt;
+	tessDeleteTess(tess);
+
 	return true;
 }
 
@@ -543,17 +479,16 @@ void end_shape(MonkSWF::ShapeWithStyle& shape) {
 		get_contours_and_holes(contours);
 		
 		// Triangulate and emit.
-		for (CollectorArray::iterator it = contours.begin(); it != contours.end(); ++it) {
-			create_mesh( shape, *it );
-		}
+		create_mesh( shape, contours, i );
 	}
+
 	// clean memory
 	for (CollectorArray::iterator it = s_collectors.begin(); it != s_collectors.end(); ++it) {
 		delete (*it);
 	}
 	s_collectors.clear();
 }
-#endif
+
 //-----------------------------------------------------------------------------
 
 }// end namespace triangulation

@@ -260,7 +260,6 @@ public:
 		glLineWidth(style.getWidth());
 		glDisable(GL_TEXTURE_2D);
 	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	    glColor4f(color.r, color.g, color.b, color.a);
 		glBegin(GL_LINE_STRIP);
 		for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {
@@ -279,6 +278,7 @@ public:
 			color += cxform.add;
 			glDisable(GL_TEXTURE_2D);
 	        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			//glBlendFunc(GL_SRC_ALPHA_SATURATE, GL_ONE);
 	        glColor4f(color.r, color.g, color.b, color.a);
 			glBegin(PRIMITIVE_MODE);
 			for(MonkSWF::VertexArray::const_iterator it = vertices.begin(); it != vertices.end(); ++it) {
@@ -448,19 +448,19 @@ void _terminate_(void)
     delete MonkSWF::Renderer::getRenderer();
 	delete gpSWF;
     gpSWF = NULL;
+	MonkSWF::SWF::terminate();
 }
 
 //Called to update the display.
 //You should call glutSwapBuffers after all of your rendering to display what you rendered.
 //If you need continuous updates of the screen, call glutPostRedisplay() at the end of the function.
-void display()
-{
+void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-    if (gpSWF) 
-    {
+    if (gpSWF) {
+#if 1
         const MonkSWF::COLOR4f& color = gpSWF->getBackgroundColor();
         const float w = gpSWF->getFrameWidth();
         const float h = gpSWF->getFrameHeight();
@@ -472,10 +472,12 @@ void display()
 	    glVertex2f(w, h);
 	    glVertex2f(0, h);
 	    glEnd();
+#endif
         glBindTexture(GL_TEXTURE_2D, suDefaultTexture);
         glEnable(GL_TEXTURE_2D);
         gpSWF->draw();
-        //gpSWF->drawDuplicate();
+
+		//gpSWF->drawDuplicate();
     }
 
 	glutSwapBuffers();
@@ -600,7 +602,7 @@ int _tmain(int argc, char* argv[])
     fread(pBuffer,size,1,fp);
     fclose(fp);
     MonkSWF::Reader reader(pBuffer, size);
-    MonkSWF::SWF::initialize(myLoadAssetCallback);
+    MonkSWF::SWF::initialize(myLoadAssetCallback, 256*1024);
     gpSWF = new MonkSWF::SWF;
 
 	// trim unsupported tags
@@ -616,6 +618,7 @@ int _tmain(int argc, char* argv[])
 		gpSWF->trimSkippedTags(output, reader);
 	    delete [] pBuffer;
 		delete gpSWF;
+		MonkSWF::SWF::terminate();
 		return 1;
 	}
 
@@ -638,7 +641,7 @@ int _tmain(int argc, char* argv[])
 	glutPassiveMotionFunc( motionCB );
 	glutTimerFunc(kMilliSecondPerFrame, Timer, 0);
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     //glDepthMask(false);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -652,6 +655,8 @@ int _tmain(int argc, char* argv[])
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     glEnable(GL_TEXTURE_2D);
+	glEnable(GL_LINE_SMOOTH);
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
 #ifdef  USE_FMOD
     // initial fmod audio library
@@ -666,8 +671,10 @@ int _tmain(int argc, char* argv[])
 #if 1
     MonkSWF::Renderer::setRenderer(new glRenderer);
 	gpSWF->setGetURL( myURLCallback );
+	clock_t tick = clock();
     bool ret = gpSWF->read(reader);
     delete [] pBuffer;
+	printf("loading time: %.2f sec\n", (clock()-tick)*0.001f);
 
     if (ret) {
         width = (int)gpSWF->getFrameWidth();

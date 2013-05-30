@@ -13,8 +13,6 @@
 
 namespace MonkSWF {
 
-const int kINVALID = -1;
-
 class ShapeWithStyle;
 class Path;
 
@@ -23,7 +21,9 @@ class Path;
 //-----------------------------------------------------------------------------
 
 namespace triangulation {
-	void begin_shape(float curve_error_tolerance);
+	void create_memory_pool(int size);
+	void destroy_memory_pool(void);
+	void begin_shape(void);
 	void add_collector(MonkSWF::ShapeWithStyle& shape, MonkSWF::Path&);
 	void end_shape(MonkSWF::ShapeWithStyle&);
 }

@@ -15,89 +15,87 @@
 
 #include <iterator>
 #include <algorithm>
-//#include "openvg.h"	
 
 #define PAD_SPREAD_MODE         0x0
 #define REFLECT_SPREAD_MODE		0x1
 #define REPEAT_SPREAD_MODE		0x2
 
-const float curve_error_tolerance = 3.f;
-
 namespace MonkSWF {
-	
+
 //-----------------------------------------------------------------------------
 	
-	bool Gradient::read( Reader* reader, bool support_32bit_color  ) {
-		_spread_mode = reader->getbits( 2 );
-		_interpolation_mode = reader->getbits( 2 );
-		_num_gradients = reader->getbits( 4 );
+bool Gradient::read( Reader* reader, bool support_32bit_color  ) {
+	_spread_mode = reader->getbits( 2 );
+	_interpolation_mode = reader->getbits( 2 );
+	_num_gradients = reader->getbits( 4 );
 		
-		for ( int i = 0; i < _num_gradients; i++ ) {
-            Gradient::Record record;
-			record._ratio = reader->get<uint8_t>();
-			record._color.r = reader->get<uint8_t>(); 
-			record._color.g = reader->get<uint8_t>(); 
-			record._color.b = reader->get<uint8_t>();
-			if( support_32bit_color )
-				record._color.a = reader->get<uint8_t>();
-			else
-				record._color.a = 255;
-			_gradient_records.push_back( record );
-		}
-        
-		return true;
+	for ( int i = 0; i < _num_gradients; i++ ) {
+        Gradient::Record record;
+		record._ratio = reader->get<uint8_t>();
+		record._color.r = reader->get<uint8_t>(); 
+		record._color.g = reader->get<uint8_t>(); 
+		record._color.b = reader->get<uint8_t>();
+		if( support_32bit_color )
+			record._color.a = reader->get<uint8_t>();
+		else
+			record._color.a = 255;
+		_gradient_records.push_back( record );
 	}
+        
+	return true;
+}
 #if 0
-    void Gradient::configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color ) {
-        float c[6];
-        c[0] = m.sx / float(1<<16);
-        c[1] = m.sy / float(1<<16);
-        c[2] = m.tx * 0.05f;
-        c[3] = m.ty * 0.05f;
-        c[4] = m.r0 / float(1<<16);
-        c[5] = m.r1 / float(1<<16);
+void Gradient::configPaint( VGPaint paint, uint8_t type, MATRIX& m, bool support_32bit_color ) {
+    float c[6];
+    c[0] = m.sx / float(1<<16);
+    c[1] = m.sy / float(1<<16);
+    c[2] = m.tx * 0.05f;
+    c[3] = m.ty * 0.05f;
+    c[4] = m.r0 / float(1<<16);
+    c[5] = m.r1 / float(1<<16);
 
-        vgSetParameterfv(paint, VG_PAINT_2x3_GRADIENT, 6, &c[0]);
+    vgSetParameterfv(paint, VG_PAINT_2x3_GRADIENT, 6, &c[0]);
         
-        if (type == LINEAR_GRADIENT_FILL) {
-            vgSetParameteri(paint, VG_PAINT_TYPE, VG_PAINT_TYPE_LINEAR_2x3_GRADIENT);
-        } else if (type == RADIAL_GRADIENT_FILL) {
-            vgSetParameteri(paint, VG_PAINT_TYPE, VG_PAINT_TYPE_RADIAL_2x3_GRADIENT);
-        } else if (type == FOCAL_GRADIENT_FILL) {
-            assert(0); // not supported, gradient would need to read the focal point
-        }
-        
-        if (_spread_mode == PAD_SPREAD_MODE) {
-            vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_PAD);
-        } else if (_spread_mode == REFLECT_SPREAD_MODE) {
-            vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_REFLECT);
-        } else if (_spread_mode == REPEAT_SPREAD_MODE) {
-            vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_REPEAT);
-        }
-        
-        //VG_PAINT_COLOR_RAMP_STOPS
-        //  One entry per color
-        int rampStopsSize = _gradient_records.size() * 5;
-        float* rampStops = new float[rampStopsSize];
-        
-        for (uint32_t i = 0; i < _gradient_records.size(); ++i) {
-            int n = i * 5;
-            rampStops[n]      = _gradient_records[i]._ratio / 255.0f;
-            rampStops[n+1]    = _gradient_records[i]._color.r / 255.0f;
-            rampStops[n+2]    = _gradient_records[i]._color.g / 255.0f;
-            rampStops[n+3]    = _gradient_records[i]._color.b / 255.0f;
-            if (support_32bit_color) {
-                rampStops[n+4]    = _gradient_records[i]._color.a / 255.0f;
-            } else {
-                rampStops[n+4]    = 1.0f;
-            }
-        }
-        vgSetParameterfv(paint, VG_PAINT_COLOR_RAMP_STOPS, rampStopsSize, &rampStops[0]);
-        
-        delete [] rampStops;
-        rampStops = NULL;
+    if (type == LINEAR_GRADIENT_FILL) {
+        vgSetParameteri(paint, VG_PAINT_TYPE, VG_PAINT_TYPE_LINEAR_2x3_GRADIENT);
+    } else if (type == RADIAL_GRADIENT_FILL) {
+        vgSetParameteri(paint, VG_PAINT_TYPE, VG_PAINT_TYPE_RADIAL_2x3_GRADIENT);
+    } else if (type == FOCAL_GRADIENT_FILL) {
+        assert(0); // not supported, gradient would need to read the focal point
     }
+        
+    if (_spread_mode == PAD_SPREAD_MODE) {
+        vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_PAD);
+    } else if (_spread_mode == REFLECT_SPREAD_MODE) {
+        vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_REFLECT);
+    } else if (_spread_mode == REPEAT_SPREAD_MODE) {
+        vgSetParameteri(paint, VG_PAINT_COLOR_RAMP_SPREAD_MODE, VG_COLOR_RAMP_SPREAD_REPEAT);
+    }
+        
+    //VG_PAINT_COLOR_RAMP_STOPS
+    //  One entry per color
+    int rampStopsSize = _gradient_records.size() * 5;
+    float* rampStops = new float[rampStopsSize];
+        
+    for (uint32_t i = 0; i < _gradient_records.size(); ++i) {
+        int n = i * 5;
+        rampStops[n]      = _gradient_records[i]._ratio / 255.0f;
+        rampStops[n+1]    = _gradient_records[i]._color.r / 255.0f;
+        rampStops[n+2]    = _gradient_records[i]._color.g / 255.0f;
+        rampStops[n+3]    = _gradient_records[i]._color.b / 255.0f;
+        if (support_32bit_color) {
+            rampStops[n+4]    = _gradient_records[i]._color.a / 255.0f;
+        } else {
+            rampStops[n+4]    = 1.0f;
+        }
+    }
+    vgSetParameterfv(paint, VG_PAINT_COLOR_RAMP_STOPS, rampStopsSize, &rampStops[0]);
+        
+    delete [] rampStops;
+    rampStops = NULL;
+}
 #endif
+
 //-----------------------------------------------------------------------------
 
 bool LineStyle::read( Reader* reader, bool lineStyle2, bool support_32bit_color ) {
@@ -115,15 +113,15 @@ bool LineStyle::read( Reader* reader, bool lineStyle2, bool support_32bit_color 
 	}
 
 	// TODO: support LINESTYLE2
-	uint16_t flag = reader->get<uint16_t>();
-	int startCapStyle	= (flag&0xC000) >> 14;
-	int joinStyle		= (flag&0x3000) >> 12;
-	bool hasFill		= (flag&0x0800) > 0;
-	bool noHScale		= (flag&0x0400) > 0;
-	bool noVScale		= (flag&0x0200) > 0;
-	bool pixelHint		= (flag&0x0100) > 0;
-	bool noClose		= (flag&0x0004) > 0;
-	int endCapStyle		= (flag&0x0003);
+	uint32_t startCapStyle	= reader->getbits(2);
+	uint32_t joinStyle		= reader->getbits(2);
+	bool hasFill		= reader->getbit() > 0;
+	bool noHScale		= reader->getbit() > 0;
+	bool noVScale		= reader->getbit() > 0;
+	bool pixelHint		= reader->getbit() > 0;
+	uint32_t reserved	= reader->getbits(5);
+	bool noClose		= reader->getbit() > 0;
+	uint32_t endCapStyle		= reader->getbits(2);
 
 	if (2 == joinStyle) {
 		uint16_t flag = reader->get<uint16_t>();
@@ -141,7 +139,6 @@ bool LineStyle::read( Reader* reader, bool lineStyle2, bool support_32bit_color 
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 
@@ -210,7 +207,8 @@ bool ShapeWithStyle::read( Reader& reader, SWF& swf, DefineShapeTag* define_shap
 	bool ret2 = readShapeRecords(&reader, userLineStyle2, useRGBA);
 
 	// fetch asset handle and calculate texture matrix
-	for (MeshArray::iterator it = _meshes.begin(); it != _meshes.end(); ++it) {
+	for (ShapeArray::iterator i = _shapes.begin(); i != _shapes.end(); ++i) {
+	for (MeshArray::iterator it = i->_meshes.begin(); it != i->_meshes.end(); ++it) {
 		FillStyle *style = it->_style;
 		if (0 == (style->type() & FillStyle::TYPE_REPEATING_BITMAP) )
 			continue;
@@ -241,6 +239,7 @@ bool ShapeWithStyle::read( Reader& reader, SWF& swf, DefineShapeTag* define_shap
 		mtx.r0 = mtx.r1 = 0.f;
 		mtx = MATRIX::concatenate(inv, mtx);
 		MATRIX3fSet(style->_bitmap_matrix, mtx);
+	}
 	}
 
 	return ret1 | ret2;
@@ -300,6 +299,7 @@ bool ShapeWithStyle::readShapeRecords( Reader* reader, bool lineStyle2, bool sup
 			if (! current.isEmpty()) {
 				_paths.push_back(current);
 				current.getEdges().clear();
+				current._new_shape = false;
 				MK_TRACE("new path\n");
 			}
 			if ( flags ) { // style change record
@@ -311,12 +311,15 @@ bool ShapeWithStyle::readShapeRecords( Reader* reader, bool lineStyle2, bool sup
 					MK_TRACE("move:  %.2f, %.2f\n", start.x, start.y);
 				} 
 				if( flags & SF_FILL0 ) { 
-					current._fill0 = reader->getbits( num_fill_bits ) - 1 + fill_base;
+					int idx = reader->getbits( num_fill_bits ) - 1;
+					current._fill0 = (0>idx) ? idx : idx + fill_base;
 					current.getStart() = start;
 					MK_TRACE("fill0: %d\n", current._fill0);
 				} 
 				if( flags & SF_FILL1 ) {
-					current._fill1 = reader->getbits( num_fill_bits ) - 1 + fill_base;
+					int idx = reader->getbits( num_fill_bits ) - 1;
+					current._fill1 = (0>idx) ? idx : idx + fill_base;
+					//current._fill1 = reader->getbits( num_fill_bits ) - 1 + fill_base;
 					current.getStart() = start;
 					MK_TRACE("fill1: %d\n", current._fill1);
 				} 
@@ -330,7 +333,7 @@ bool ShapeWithStyle::readShapeRecords( Reader* reader, bool lineStyle2, bool sup
 					current._fill1 = -1;
 					current._line = -1;
 					current.getStart() = start;
-					//current._new_shape = true;
+					current._new_shape = true;
 					// get the fill/line styles
 					fill_base = _fill_styles.size();
 					line_base = _line_styles.size();
@@ -397,11 +400,14 @@ bool Path::isClockWise(void) const {
 }
 
 bool ShapeWithStyle::triangluate(void) {
-	triangulation::begin_shape( curve_error_tolerance );
+	Shape s;
+	_shapes.push_back( s );
+	triangulation::begin_shape();
 	for (PathArray::iterator it = _paths.begin(); it != _paths.end(); ++it) {
 		if (it->_new_shape) {
 			triangulation::end_shape(*this);
-			triangulation::begin_shape( curve_error_tolerance );
+			_shapes.push_back( s );
+			triangulation::begin_shape();
 		}
 		triangulation::add_collector(*this, *it);
 	}
@@ -411,15 +417,18 @@ bool ShapeWithStyle::triangluate(void) {
 }
 
 void ShapeWithStyle::draw() {
-	for (MeshArray::iterator it = _meshes.begin(); it != _meshes.end(); ++it) {
-		if (it->_asset.import) {
-			Renderer::getRenderer()->drawImportAsset(it->_bound, SWF::getCurrentCXForm(), it->_asset);
-		} else {
-			Renderer::getRenderer()->drawTriangles( it->_vertices, SWF::getCurrentCXForm(), *(it->_style), it->_asset);
+	for (ShapeArray::const_iterator i = _shapes.begin(); i != _shapes.end(); ++i) {
+		const Shape& shape = *i;
+		for (MeshArray::const_iterator j = shape._meshes.begin(); j != shape._meshes.end(); ++j) {
+			if (j->_asset.import) {
+				Renderer::getRenderer()->drawImportAsset(j->_bound, SWF::getCurrentCXForm(), j->_asset);
+			} else {
+				Renderer::getRenderer()->drawTriangles( j->_vertices, SWF::getCurrentCXForm(), *(j->_style), j->_asset);
+			}
 		}
-	}
-	for (LineArray::iterator it = _lines.begin(); it != _lines.end(); ++it) {
-		Renderer::getRenderer()->drawLineStrip( it->_vertices, SWF::getCurrentCXForm(), *(it->_style));
+		for (LineArray::const_iterator j = shape._lines.begin(); j != shape._lines.end(); ++j) {
+			Renderer::getRenderer()->drawLineStrip( j->_vertices, SWF::getCurrentCXForm(), *(j->_style));
+		}
 	}
 }
 
@@ -449,9 +458,11 @@ bool ShapeWithStyle::Mesh::isInsideMesh(const POINTf& pt) const {
 
 bool ShapeWithStyle::isInside(float x, float y) const {
 	POINTf pt = {x,y};
-	for (MeshArray::const_iterator it = _meshes.begin(); it != _meshes.end(); ++it) {
+	for (ShapeArray::const_iterator i = _shapes.begin(); i != _shapes.end(); ++i) {
+	for (MeshArray::const_iterator it = i->_meshes.begin(); it != i->_meshes.end(); ++it) {
 		if (it->isInsideMesh(pt))
 			return true;
+	}
 	}
 	return false;
 }

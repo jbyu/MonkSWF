@@ -20,6 +20,7 @@
 #include "tags/DoAction.h"
 #include "tags/FrameLabel.h"
 #include "tags/DefineButton.h"
+#include "tags/VectorEngine.h"
 
 namespace MonkSWF {
 	
@@ -62,7 +63,7 @@ MovieClip *SWF::createMovieClip(const ITag &tag)
 #endif
 
 //static function
-bool SWF::initialize(LoadAssetCallback func) {
+bool SWF::initialize(LoadAssetCallback func, int memory_pool_size) {
     _asset_loader = func;
 	// setup the factories
 	addFactory( TAG_END,			EndTag::create );
@@ -90,9 +91,16 @@ bool SWF::initialize(LoadAssetCallback func) {
     addFactory( TAG_FRAME_LABEL,    FrameLabelTag::create );
 
 	addFactory( TAG_SET_BACKGROUND_COLOR, SetBackgroundColorTag::create );
+
+	triangulation::create_memory_pool(memory_pool_size);
 	return true;
 }
-	
+
+bool SWF::terminate(void) {
+	triangulation::destroy_memory_pool();
+	return true;
+}
+
 bool SWF::read( Reader& reader ) {
 	bool ret = _header.read( reader );
     if (false == ret)
@@ -213,26 +221,9 @@ void SWF::update( float delta )
 }
     
 void SWF::draw(void) {
-#ifdef USE_OPENVG
-	// make sure we use even odd fill rule
-	vgSeti( VG_FILL_RULE, VG_EVEN_ODD );
-	// clear the screen
-	VGfloat clearColor[] = {1,1,1,1};
-	vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
-	vgClear(0,0,_header.getFrameWidth(), _header.getFrameHeight() );
-		
-	vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
-	VGfloat oldMatrix[9];
-	vgGetMatrix( oldMatrix );
-	vgMultMatrix( _rootTransform );
-#endif
     Renderer::getRenderer()->drawBegin();
 	MovieClip::draw();
     Renderer::getRenderer()->drawEnd();
-#ifdef USE_OPENVG
-	// restore old matrix
-	vgLoadMatrix( oldMatrix );
-#endif
 }
 
 RECT SWF::calculateRectangle(uint16_t character, const MATRIX* xf) {

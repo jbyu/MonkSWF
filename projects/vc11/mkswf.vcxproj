@@ -52,13 +52,18 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SWF_DEBUG;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\zlib\include</AdditionalIncludeDirectories>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
+    <Lib />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -77,18 +82,23 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\poly2tri\common\shapes.h" />
-    <ClInclude Include="..\..\poly2tri\common\utils.h" />
-    <ClInclude Include="..\..\poly2tri\poly2tri.h" />
-    <ClInclude Include="..\..\poly2tri\sweep\advancing_front.h" />
-    <ClInclude Include="..\..\poly2tri\sweep\cdt.h" />
-    <ClInclude Include="..\..\poly2tri\sweep\sweep.h" />
-    <ClInclude Include="..\..\poly2tri\sweep\sweep_context.h" />
+    <ClInclude Include="..\..\libtess2\bucketalloc.h" />
+    <ClInclude Include="..\..\libtess2\dict.h" />
+    <ClInclude Include="..\..\libtess2\geom.h" />
+    <ClInclude Include="..\..\libtess2\mesh.h" />
+    <ClInclude Include="..\..\libtess2\priorityq.h" />
+    <ClInclude Include="..\..\libtess2\sweep.h" />
+    <ClInclude Include="..\..\libtess2\tess.h" />
+    <ClInclude Include="..\..\libtess2\tesselator.h" />
     <ClInclude Include="..\..\src\mkCommon.h" />
     <ClInclude Include="..\..\src\mkHeader.h" />
     <ClInclude Include="..\..\src\mkMovieClip.h" />
@@ -111,11 +121,13 @@
     <ClInclude Include="..\..\src\tags\VectorEngine.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\poly2tri\common\shapes.cc" />
-    <ClCompile Include="..\..\poly2tri\sweep\advancing_front.cc" />
-    <ClCompile Include="..\..\poly2tri\sweep\cdt.cc" />
-    <ClCompile Include="..\..\poly2tri\sweep\sweep.cc" />
-    <ClCompile Include="..\..\poly2tri\sweep\sweep_context.cc" />
+    <ClCompile Include="..\..\libtess2\bucketalloc.c" />
+    <ClCompile Include="..\..\libtess2\dict.c" />
+    <ClCompile Include="..\..\libtess2\geom.c" />
+    <ClCompile Include="..\..\libtess2\mesh.c" />
+    <ClCompile Include="..\..\libtess2\priorityq.c" />
+    <ClCompile Include="..\..\libtess2\sweep.c" />
+    <ClCompile Include="..\..\libtess2\tess.c" />
     <ClCompile Include="..\..\src\mkHeader.cpp" />
     <ClCompile Include="..\..\src\mkMovieClip.cpp" />
     <ClCompile Include="..\..\src\mkReader.cpp" />

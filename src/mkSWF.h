@@ -83,7 +83,10 @@ public:
         typedef Asset (*LoadAssetCallback)( const char *name, bool import );
         typedef void (*GetURLCallback)( MovieClip&, bool isFSCommand, const char *command, const char *target );
 
-		static bool initialize(LoadAssetCallback);
+		// Curve subdivision error tolerance.
+		static float curve_error_tolerance;
+		static bool initialize(LoadAssetCallback, int memory_pool_size = 0);
+		static bool terminate(void); // clean up
 
 		static TagFactoryFunc getTagFactory( uint32_t tag_code ) {
 			TagFactoryMap::iterator factory = _tag_factories.find( tag_code );
