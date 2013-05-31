@@ -94,7 +94,6 @@ class MovieClip;
 
 //-----------------------------------------------------------------------------
 
-typedef std::map<uint16_t, PlaceObjectTag*>	DisplayList;
 typedef std::map<std::string, uint32_t>     LabelList;
 typedef std::vector<ITag*>					TagList;
 typedef std::vector<TagList*>				FrameList;
@@ -186,10 +185,8 @@ public:
     virtual const RECT& getRectangle(void) const = 0;
 	virtual void draw(void) = 0;
 	virtual void update(void) = 0;
-    virtual void play( bool enable ) = 0;
-	virtual void gotoFrame( uint32_t frame, bool skipAction ) = 0;
 	virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest) = 0;
-	virtual void onEvent(Event::Code) {}
+	virtual void onEvent(Event::Code) = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -236,12 +233,15 @@ public:
 	FillStyle()
 	:_type(TYPE_INVALID)
     ,_bitmap_id(0)
-	{}
+	{
+		COLOR4f init = { 0,0,0,1 };
+		_color = init;
+	}
 		
 	bool read( Reader* reader, bool support_32bit_color );
 		
 	void print() {
-        MK_TRACE("FILLSTYLE=0x%x, bitmap=%d, color=[%f,%f,%f,%f]\n", _type, _bitmap_id, _color.r, _color.g, _color.b, _color.a);
+        MK_TRACE("FILLSTYLE=0x%x, bitmap=%d, color=[%.2f,%.2f,%.2f,%.2f]\n", _type, _bitmap_id, _color.r, _color.g, _color.b, _color.a);
 	}
 	
     uint16_t getBitmap(void) const { return _bitmap_id; }

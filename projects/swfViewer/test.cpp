@@ -487,23 +487,23 @@ void display() {
 //This is an opportunity to call glViewport or glScissor to keep up with the change in size.
 void reshape (int w, int h)
 {
-    /*
-    if (gpSWF)
-    {
-        const SWF_RECT& rect = gpSWF->GetRect();
-        w = rect.m_dwXMax - rect.m_dwXMin;
-        h = rect.m_dwYMax - rect.m_dwYMin;
-    	glViewport(0, 0, (GLsizei) w, (GLsizei) h);
-    	glMatrixMode(GL_PROJECTION);
-    	glLoadIdentity();
-    	gluOrtho2D(rect.m_dwXMin, rect.m_dwXMax, rect.m_dwYMin, rect.m_dwYMax);
-        return;
-    }
-    */
 	glViewport(0, 0, (GLsizei) w, (GLsizei) h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0, w, h, 0);
+	float pw = float(w);
+	float ph = float(h);
+	if (gpSWF) {
+		float sx = pw / gpSWF->getFrameWidth();
+		float sy = ph / gpSWF->getFrameHeight();
+		if (sx > sy) {
+			pw = gpSWF->getFrameHeight() * pw / ph;
+			ph = gpSWF->getFrameHeight();
+		} else {
+			ph = gpSWF->getFrameWidth() * ph / pw;
+			pw = gpSWF->getFrameWidth();
+		}
+    }
+	gluOrtho2D(0, pw, ph, 0);
 }
 
 static bool gbUpdate = true;
@@ -595,12 +595,15 @@ int _tmain(int argc, char* argv[])
 	// load swf
     char *filename = argv[1];
     FILE *fp = fopen(filename,"rb");
+	if (! fp)
+		return 0;
     fseek(fp, 0, SEEK_END);
     int size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     char *pBuffer = new char[size];
     fread(pBuffer,size,1,fp);
     fclose(fp);
+	MonkSWF::SWF::curve_error_tolerance = 1.f;
     MonkSWF::Reader reader(pBuffer, size);
     MonkSWF::SWF::initialize(myLoadAssetCallback, 256*1024);
     gpSWF = new MonkSWF::SWF;

@@ -139,13 +139,8 @@ namespace MonkSWF
 		virtual ~Button();
 
 		// override DefineShapeTag function
-        //virtual const RECT& getRectangle(void) const { return _bound; }
-		virtual void draw(void);
 		virtual void update(void);
-        virtual void play( bool enable );
-		virtual void gotoFrame( uint32_t frame, bool skipAction );
 		virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest);
-
 		virtual void onEvent(Event::Code);
 
 	private:
@@ -164,7 +159,7 @@ namespace MonkSWF
 		MovieFrames			_frames;
 		MouseState			_mouseState;
 		StateArray			_buttonStates;
-		StateArray			_buttonHitTests;
+		DisplayList			_buttonHitTests;
 	};
 
 //-----------------------------------------------------------------------------

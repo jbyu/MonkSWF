@@ -37,16 +37,14 @@ namespace MonkSWF {
 
         virtual void setup(MovieClip &movie, bool skipAction )
         {
-            DisplayList& _display_list = movie.getDisplayList();
+            MovieClip::DisplayList& _display_list = movie.getDisplayList();
 		    const uint16_t depth = this->depth();
-			DisplayList::iterator it = _display_list.find(depth);
+			MovieClip::DisplayList::iterator it = _display_list.find(depth);
 			if (it == _display_list.end())
 				return;
 
-			PlaceObjectTag* current_obj = it->second;;
-            if (current_obj)
-                current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM, skipAction);
-            //_display_list[ depth ] = NULL;
+			//PlaceObjectTag* current_obj = it->second;;
+            //if (current_obj) current_obj->gotoFrame(ICharacter::kFRAME_MAXIMUM, skipAction);
 			_display_list.erase(it);
         }
 

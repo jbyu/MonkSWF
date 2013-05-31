@@ -276,7 +276,50 @@ typedef struct _CXFORM
     COLOR4f mult;
     COLOR4f add;
 } CXFORM;
-	
+
+
+//static inline float degrees (float radians) {return radians * (180.0f/3.14159f);}	
+inline void COLOR4fSet(
+	COLOR4f		&mOut,
+	const COLOR4f	&mIn)
+{
+    mOut.r = mIn.r;
+    mOut.g = mIn.g;
+    mOut.b = mIn.b;
+    mOut.a = mIn.a;
+}
+inline void COLOR4fMultiply(
+	COLOR4f		&mOut,
+	const COLOR4f	&mA,
+	const COLOR4f	&mB)
+{
+    mOut.r = mA.r * mB.r;
+    mOut.g = mA.g * mB.g;
+    mOut.b = mA.b * mB.b;
+    mOut.a = mA.a * mB.a;
+}
+inline void COLOR4fAdd(
+	COLOR4f		&mOut,
+	const COLOR4f	&mA,
+	const COLOR4f	&mB)
+{
+    mOut.r = mA.r + mB.r;
+    mOut.g = mA.g + mB.g;
+    mOut.b = mA.b + mB.b;
+    mOut.a = mA.a + mB.a;
+}
+
+inline void CXFORMMultiply(
+	CXFORM		&mOut,
+	const CXFORM	&child,
+	const CXFORM	&parent)
+{
+    COLOR4f add;
+    COLOR4fMultiply(add, parent.mult, child.add);
+    COLOR4fAdd(mOut.add, parent.add, add);
+    COLOR4fMultiply(mOut.mult, child.mult, parent.mult);
+}
+
 struct GRADIENT
 {
 	int num;

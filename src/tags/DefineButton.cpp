@@ -151,12 +151,15 @@ Button::Button( MovieClip& parent,  DefineButton2Tag& data )
 	ButtonRecordArray::const_iterator it = getDefinition()._buttonRecords.begin();
 	while( getDefinition()._buttonRecords.end() != it) {
 		PlaceObjectTag *object = new PlaceObjectTag( *it );
-		object->setup(*this, true);
 		ButtonState state = { it->_state, object };
+		_buttonStates.push_back( state );
+
+		// create instances for hit test
 		if (it->_state & kButtonStateHitTest) {
-			_buttonHitTests.push_back( state );
-		} else {
-			_buttonStates.push_back( state );
+			const uint16_t depth = it->_depth;
+			MovieObject& mo = _buttonHitTests[ depth ];
+			mo._character = this->getInstance(object);
+			object->copyAttributes(mo);
 		}
 		++it;
 	}
@@ -172,84 +175,37 @@ Button::~Button()
 		delete it->_object;
 		++it;
 	}
-	it = _buttonHitTests.begin();
-	while( _buttonHitTests.end() != it) {
-		delete it->_object;
-		++it;
-	}
 }
 
-#if 1
-
-void Button::update(void)
-{
-	int flag = 1 << _mouseState;
-	StateArray::const_iterator it = _buttonStates.begin();
-	while( _buttonStates.end() != it) {
-		if (it->_state & flag) {
-			it->_object->update();
-		}
-		++it;
-	}
-}
-
-void Button::play(bool enable) 
-{
-	int flag = 1 << _mouseState;
-	StateArray::const_iterator it = _buttonStates.begin();
-	while( _buttonStates.end() != it) {
-		if (it->_state & flag) {
-			it->_object->play(enable);
-		}
-		++it;
-	}
-}
-
-void Button::gotoFrame(uint32_t frame, bool skipAction)
-{
-	int flag = 1 << _mouseState;
-	StateArray::const_iterator it = _buttonStates.begin();
-	while( _buttonStates.end() != it) {
-		if (it->_state & flag) {
-			it->_object->gotoFrame( frame, skipAction );
-		}
-		++it;
-	}
-}
-
-void Button::draw() {
-	int flag = 1 << _mouseState;
-	StateArray::const_iterator it = _buttonStates.begin();
-	while( _buttonStates.end() != it) {
-		if (it->_state & flag) {
-			it->_object->draw();
-		}
-		++it;
+void Button::update(void) {
+    // update the display list
+	DisplayList::iterator iter = _display_list.begin();
+	while ( _display_list.end() != iter ) {
+		iter->second.update();
+		++iter;
 	}
 }
 
 ICharacter* Button::getTopMost(float x, float y, bool polygonTest) {
-	StateArray::iterator it = _buttonHitTests.begin();
-	while( it != _buttonHitTests.end() ) {
-		PlaceObjectTag* pObj = it->_object;
-		MK_ASSERT(pObj);
-		ICharacter* pCharacter = pObj->getCharacter();
+	DisplayList::reverse_iterator rit = _buttonHitTests.rbegin();
+	while( rit != _buttonHitTests.rend() ) {
+		MovieObject &object = rit->second;
+		ICharacter* pCharacter = object._character;
 		if (pCharacter) {
 			MATRIX m;
 			POINTf local, world = {x,y};
-			m.setInverse(pObj->getTransform());
-			m.transform(local, world);
+			m.setInverse( object._transform );
+			m.transform( local, world );
 			if (pCharacter->getTopMost(local.x, local.y, true))
 				return this;
 		}
-        ++it;
+        ++rit;
 	}
 	return NULL;
 }
 
-#endif 
-
 void Button::setupFrame(void) {
+	clearDisplayList();
 	int flag = 1 << _mouseState;
 	StateArray::const_iterator it = _buttonStates.begin();
 	while( _buttonStates.end() != it) {

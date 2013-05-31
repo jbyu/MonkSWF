@@ -128,6 +128,18 @@ MovieClip *MovieClip::createMovieClip(const DefineSpriteTag &sprite)
 	return movie;
 }
 
+class nullCharacter : public ICharacter {
+	RECT _bound;
+public:
+	virtual const RECT& getRectangle(void) const { return _bound; }
+	virtual void draw(void) {}
+	virtual void update(void) {}
+	virtual ICharacter* getTopMost(float localX, float localY, bool polygonTest) { return NULL; }
+	virtual void onEvent(Event::Code) {}
+};
+
+static nullCharacter soDefaultNullCharacter;
+
 ICharacter *MovieClip::getInstance(const PlaceObjectTag* placeTag) 
 {
 	// find cache
@@ -135,12 +147,12 @@ ICharacter *MovieClip::getInstance(const PlaceObjectTag* placeTag)
 	if (it != _characters.end())
 		return it->second;
 
+	ICharacter *character = &soDefaultNullCharacter;
 	uint16_t character_id = placeTag->characterID();
 	ITag *tag = _owner->getCharacter( character_id );
 	if (! tag)
-		return NULL;
+		return character;
 
-	ICharacter *character = NULL;
 	switch ( tag->code() ) {
 	case TAG_DEFINE_SPRITE:
 		character = createMovieClip( *(DefineSpriteTag*) tag);
@@ -210,53 +222,71 @@ void MovieClip::update(void)
 
     // update the display list
 	DisplayList::iterator iter = _display_list.begin();
-	while ( _display_list.end() != iter )
-	{
-		PlaceObjectTag *place_obj = iter->second;
-		if (place_obj) 
-		{
-			place_obj->update();
-		}
+	while ( _display_list.end() != iter ) {
+		iter->second.update();
 		++iter;
 	}
 }
 
+void MovieObject::draw() {
+    //concatenate matrix
+	MATRIX3f& currMTX = SWF::getCurrentMatrix();
+    MATRIX3f origMTX = currMTX, mtx;
+    MATRIX3fSet(mtx, _transform); // convert matrix format
+    MATRIX3fMultiply(currMTX, mtx, currMTX);
+
+	CXFORM& currCXF = SWF::getCurrentCXForm();
+    CXFORM origCXF = currCXF;
+    CXFORMMultiply(currCXF, _cxform, currCXF);
+
+    Renderer::getRenderer()->applyTransform(currMTX);
+
+    // C' = C * Mult + Add
+    // in opengl, use blend mode and multi-pass to achieve that
+    // 1st pass TexEnv(GL_BLEND) with glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    //      Cp * (1-Ct) + Cc *Ct 
+    // 2nd pass TexEnv(GL_MODULATE) with glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+    //      dest + Cp * Ct
+    // let Mult as Cc and Add as Cp, then we get the result
+	MK_ASSERT (_character);
+	_character->draw();
+
+	// restore old matrix
+    currMTX = origMTX;
+    currCXF = origCXF;
+}
+	
 void MovieClip::draw(void)
 {
-    PlaceObjectTag *mask = NULL;
+    MovieObject *mask = NULL;
 	uint16_t highest_masked_layer = 0;
 	// draw the display list
 	DisplayList::iterator iter = _display_list.begin();
 	while ( _display_list.end() != iter )
 	{
-		PlaceObjectTag *place_obj = iter->second;
-		if (place_obj)
-        {
-            const uint16_t clip = place_obj->clipDepth();
-            const uint16_t depth = place_obj->depth();
-			if (mask && depth > highest_masked_layer)
-            {
-                // restore stencil
-                Renderer::getRenderer()->maskOffBegin();
-                mask->draw(); 
-                Renderer::getRenderer()->maskOffEnd();
-    			mask = NULL;
-			}
-			if (0 < clip) {
-                // draw mask
-    			Renderer::getRenderer()->maskBegin();
-                place_obj->draw(); 
-    			Renderer::getRenderer()->maskEnd();
-	    		highest_masked_layer = clip;
-				mask = place_obj;
-			} else {
-                place_obj->draw(); 
-            }
+		MovieObject &object = iter->second;
+		const int clip = object._clip_depth;
+		const uint16_t depth = iter->first;
+		if (mask && depth > highest_masked_layer) {
+            // restore stencil
+            Renderer::getRenderer()->maskOffBegin();
+            mask->draw(); 
+            Renderer::getRenderer()->maskOffEnd();
+    		mask = NULL;
+		}
+		if (0 < clip) {
+            // draw mask
+    		Renderer::getRenderer()->maskBegin();
+            object.draw(); 
+    		Renderer::getRenderer()->maskEnd();
+	    	highest_masked_layer = clip;
+			mask = &object;
+		} else {
+            object.draw(); 
         }
 		++iter;
 	}
-	if (mask)
-	{
+	if (mask) {
 		// If a mask masks the scene all the way up to the highest layer, 
         // it will not be disabled at the end of drawing the display list, so disable it manually.
         Renderer::getRenderer()->maskOffBegin();
@@ -281,13 +311,12 @@ ICharacter* MovieClip::getTopMost(float x, float y, bool polygonTest) {
 	ICharacter* pRet = NULL;
 	DisplayList::reverse_iterator rit = _display_list.rbegin();
 	while( rit != _display_list.rend() ) {
-		PlaceObjectTag* pObj = rit->second;
-		MK_ASSERT(pObj);
-		ICharacter* pCharacter = pObj->getCharacter();
+		MovieObject &object = rit->second;
+		ICharacter* pCharacter = object._character;
 		if (pCharacter) {
 			MATRIX m;
 			POINTf local, world = {x,y};
-			m.setInverse(pObj->getTransform());
+			m.setInverse( object._transform );
 			m.transform(local, world);
 			pRet = pCharacter->getTopMost(local.x, local.y, polygonTest);
 			if (pRet)
