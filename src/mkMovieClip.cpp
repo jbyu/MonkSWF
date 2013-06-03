@@ -210,9 +210,10 @@ void MovieClip::gotoAndPlay( uint32_t frame )
 	if (frame < _frame) {
 		gotoFrame(ICharacter::kFRAME_MAXIMUM, true);
 	}
-    while (frame != _frame) {
-        step(1, true);
+    while (frame > _frame + 1) {
+        step(1, true); // skip actions
     }
+	step(1, false); // execute actions in target frame
 }
 
 void MovieClip::update(void)
