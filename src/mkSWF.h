@@ -138,6 +138,7 @@ public:
 
 		// button: 0 for up, 1 for down
 		void notifyMouse(int button, int x, int y);
+		void notifyDuplicate(int button, int x, int y);
 
 		// flash information
 		float getFrameWidth() const     { return _header.getFrameWidth(); }
@@ -162,6 +163,8 @@ public:
 		RECT calculateRectangle(uint16_t character, const MATRIX* xf);
 
     private:
+		void notifyEvent(int button, int x, int y, ICharacter* target);
+
 		typedef std::map< uint32_t, TagFactoryFunc >    TagFactoryMap;
 		typedef std::map< uint16_t, ITag* >             CharacterDictionary;
         typedef std::map< uint16_t, Asset >             AssetDictionary;

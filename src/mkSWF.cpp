@@ -140,11 +140,21 @@ MovieClip *SWF::duplicate(const char *name)
     if (_library.end() != it)
     {
         ITag *tag = _dictionary[it->second];
-        if ( tag->code() == TAG_DEFINE_SPRITE ) {
+        switch ( tag->code() ) {
+		case TAG_DEFINE_SPRITE:
             // create a new instance for playback
 			movie = createMovieClip( *(DefineSpriteTag*)tag );
             movie->createTransform();
             _duplicates.push_back(movie);
+			break;
+		case TAG_DEFINE_BUTTON2:
+            // create a new instance for playback
+			movie = createButton( *(DefineButton2Tag*)tag );
+            movie->createTransform();
+            _duplicates.push_back(movie);
+			break;
+		default:
+			break;
         }
     }
     return movie;
@@ -264,10 +274,33 @@ RECT SWF::calculateRectangle(uint16_t character, const MATRIX* xf) {
 }
 
 void SWF::notifyMouse(int button, int x, int y) {
+	ICharacter *pTopMost = this->getTopMost(float(x), float(y), false);
+	notifyEvent(button,  x,  y, pTopMost);
+}
+
+void SWF::notifyDuplicate(int button, int x, int y) {
+	ICharacter* pTopMost = NULL;
+	MovieClipArray::reverse_iterator rit = _duplicates.rbegin();
+	while( rit != _duplicates.rend() ) {
+		MovieClip* pCharacter = *rit;
+		if (pCharacter) {
+			MATRIX m;
+			POINTf local, world = {float(x),float(y)};
+			m.setInverse( *pCharacter->getTransform() );
+			m.transform(local, world);
+			pTopMost = pCharacter->getTopMost(local.x, local.y, false);
+			if (pTopMost)
+				break;
+		}
+        ++rit;
+	}
+	notifyEvent(button,  x,  y, pTopMost);
+}
+
+void SWF::notifyEvent(int button, int x, int y, ICharacter *pTopMost) {
 	_mouseX = x;
 	_mouseY = y;
 	_mouseButtonStateCurr = button;
-	ICharacter *pTopMost = this->getTopMost(float(x), float(y), false);
 
 	if (0 < _mouseButtonStateLast) {
 		// Mouse button was down.
